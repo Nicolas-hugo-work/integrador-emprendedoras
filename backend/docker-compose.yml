@@ -1,0 +1,28 @@
+services:
+  mariadb:
+    image: mariadb:11.8
+    container_name: pwa-autonomia-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: pwa_autonomia
+      MARIADB_USER: pwa_app
+      MARIADB_PASSWORD: change_me
+      MARIADB_ROOT_PASSWORD: change_root
+      TZ: UTC
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mariadb_data:
+

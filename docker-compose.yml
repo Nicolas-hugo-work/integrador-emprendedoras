@@ -1,0 +1,54 @@
+services:
+  mariadb:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: pwa_autonomia
+      MARIADB_USER: pwa_app
+      MARIADB_PASSWORD: change_me_local
+      MARIADB_ROOT_PASSWORD: change_root_local
+      TZ: UTC
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+    volumes:
+      - kawsay_mariadb:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: development
+      DATABASE_URL: mysql+pymysql://pwa_app:change_me_local@mariadb:3306/pwa_autonomia?charset=utf8mb4
+      CONTENT_ENCRYPTION_KEY: local-development-encryption-key-change-in-production
+      JWT_SECRET: local-development-jwt-secret-change-before-production-2026
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  kawsay_mariadb:

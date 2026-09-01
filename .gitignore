@@ -1,0 +1,31 @@
+.env
+.venv/
+backend/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+frontend/node_modules/
+frontend/node_modules_incomplete_20260831/
+frontend/.next/
+*.pyc
+*.log
+*.egg-info/
+*.tsbuildinfo
+
+# Resultados de Graphify: conservar los artefactos principales, no sus cachés.
+**/graphify-out/cache/
+**/graphify-out/memory/
+**/graphify-out/.graphify_python
+**/graphify-out/cost.json
+backend/scripts/graphify-out/
+
+# Residuos del scaffold inicial; la aplicación usa únicamente frontend/app.
+frontend/.openai/
+frontend/.ox*
+frontend/AGENTS.md
+frontend/CLAUDE.md
+frontend/components/
+frontend/hooks/
+frontend/lib/
+frontend/components.json
+frontend/vite.config.ts

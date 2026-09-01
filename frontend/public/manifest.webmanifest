@@ -1,0 +1,11 @@
+{
+  "name": "Kawsay - Autonomía económica",
+  "short_name": "Kawsay",
+  "description": "Herramientas sencillas para fortalecer tu negocio.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf8f2",
+  "theme_color": "#642447",
+  "lang": "es",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
