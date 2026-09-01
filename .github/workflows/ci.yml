@@ -85,8 +85,18 @@ jobs:
           print("kawsay_migration lista")
           PY
 
+      - name: Migraciones al día
+        # `alembic check` falla si un modelo cambió sin su migración. Es la
+        # deteccion de deriva que faltaba: hasta v0.4.0 reventaba al reflejar
+        # la columna VECTOR(768) y por eso nunca se pudo usar.
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: |
+          alembic upgrade head
+          alembic check
+
       - name: Análisis estático
-        run: ruff check app tests
+        run: ruff check app tests alembic
 
       - name: Pruebas
         # TEST_DATABASE_URL y TEST_MIGRATION_DATABASE_URL están definidas, así

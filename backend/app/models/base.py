@@ -3,6 +3,7 @@ from typing import Any
 
 from sqlalchemy import CHAR, MetaData
 from sqlalchemy.dialects.mysql import DATETIME
+from sqlalchemy.dialects.mysql import base as mysql_base
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import UserDefinedType
 from uuid6 import uuid7
@@ -23,10 +24,28 @@ class Base(DeclarativeBase):
 
 
 class Vector768(UserDefinedType):
+    """Columna `VECTOR(768)` de MariaDB 11.7+.
+
+    Acepta la dimensión como argumento posicional porque el reflector del
+    dialecto MySQL construye el tipo con los argumentos que lee del DDL: al
+    reflejar `VECTOR(768)` llama a `Vector768(768)`.
+    """
+
     cache_ok = True
 
+    def __init__(self, dimension: int = 768, **kw: Any) -> None:
+        super().__init__()
+        self.dimension = int(dimension)
+
     def get_col_spec(self, **kw: Any) -> str:
-        return "VECTOR(768)"
+        return f"VECTOR({self.dimension})"
+
+
+# Sin este registro, reflejar `source_chunk_embeddings` falla con
+# `TypeError: NullType() takes no arguments`, porque el dialecto no conoce el
+# tipo `VECTOR` y termina construyendo `NullType(768)`. Eso dejaba inservibles
+# `alembic check` y `alembic revision --autogenerate` sobre este esquema.
+mysql_base.ischema_names["vector"] = Vector768
 
 
 class DateTime6(DATETIME):

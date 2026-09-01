@@ -38,6 +38,9 @@ addopts = "-q"
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+# `0001_initial_schema.py` es la linea base: se aplico tal cual en todas las
+# bases y no debe reformatearse. Las migraciones nuevas si se lintean.
+extend-exclude = ["alembic/versions/0001_initial_schema.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

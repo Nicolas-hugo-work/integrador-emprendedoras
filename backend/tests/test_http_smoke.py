@@ -24,9 +24,11 @@ def test_me_returns_the_authenticated_account(client, account) -> None:
     assert body["id"] == account.user_id
     assert body["status"] == "ACTIVE"
     assert set(body) == {"id", "status", "locale", "timezone", "roles", "permissions"}
-    # Quien se registra recibe EMPRENDEDORA y sus cuatro permisos sembrados.
+    # Quien se registra recibe EMPRENDEDORA y sus permisos sembrados, incluido
+    # el business.manage_own que añade la migración 0002.
     assert body["roles"] == ["EMPRENDEDORA"]
     assert body["permissions"] == [
+        "business.manage_own",
         "conversation.manage_own",
         "finance.read_own",
         "finance.write_own",
