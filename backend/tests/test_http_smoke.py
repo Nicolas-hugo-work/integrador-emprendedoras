@@ -23,7 +23,16 @@ def test_me_returns_the_authenticated_account(client, account) -> None:
     body = response.json()
     assert body["id"] == account.user_id
     assert body["status"] == "ACTIVE"
-    assert set(body) == {"id", "status", "locale", "timezone"}
+    assert set(body) == {"id", "status", "locale", "timezone", "roles", "permissions"}
+    # Quien se registra recibe EMPRENDEDORA y sus cuatro permisos sembrados.
+    assert body["roles"] == ["EMPRENDEDORA"]
+    assert body["permissions"] == [
+        "conversation.manage_own",
+        "finance.read_own",
+        "finance.write_own",
+        "profile.manage_own",
+    ]
+    assert "source.review" not in body["permissions"]
 
 
 def test_me_requires_authentication(client) -> None:

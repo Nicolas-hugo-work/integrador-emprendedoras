@@ -24,6 +24,10 @@ export type User = {
   status: string;
   locale: string;
   timezone: string;
+  /** Códigos de rol, para mostrar quién es la usuaria. */
+  roles: string[];
+  /** Códigos de permiso: los mismos que verifica el backend. */
+  permissions: string[];
 };
 
 export type BusinessStage =

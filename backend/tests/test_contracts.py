@@ -1,7 +1,13 @@
 """Regresión de contrato: OpenAPI y esquema de base de datos.
 
-Estas dos pruebas son la red de seguridad del refactor. Cualquier cambio no
-aprobado en la superficie HTTP o en el esquema falla aquí.
+Desde v0.3.0 la comprobación es **aditiva**, no de identidad: la API crece, así
+que exigir un documento idéntico bloquearía cualquier endpoint nuevo. Lo que se
+protege es la compatibilidad hacia atrás.
+
+- Ninguna operación de la línea base puede desaparecer ni cambiar.
+- Toda operación nueva debe estar declarada aquí.
+- Ningún schema puede perder propiedades; los cambios deben ser aditivos y
+  estar declarados.
 """
 
 import json
@@ -14,45 +20,101 @@ from schema_fingerprint import build_fingerprint
 from sqlalchemy import create_engine
 
 CONTRACTS = Path(__file__).resolve().parent / "contracts"
+METHODS = {"get", "post", "put", "patch", "delete"}
 
-#: Diferencias intencionales frente a `v0.1.0`, acordadas en el plan (§8).
-#: `/auth/register` dejó de responder 409 ante un contacto ya registrado para
-#: no permitir enumerar cuentas, y `/auth/login` puede responder 429. Ninguna
-#: de las dos altera el documento OpenAPI, porque esos códigos no estaban
-#: declarados explícitamente en las rutas.
-APPROVED_OPENAPI_DIFFERENCES: dict[str, str] = {}
+#: Línea base: el contrato publicado en v0.2.0.
+BASELINE = json.loads((CONTRACTS / "openapi_v0_2.json").read_text(encoding="utf-8"))
+
+#: Operaciones que v0.3.0 agrega, con el motivo. Una ruta nueva que no figure
+#: aquí hace fallar la batería: obliga a declarar cada ampliación de la API.
+APPROVED_NEW_OPERATIONS = {
+    ("/sources", "get"): "Curaduría: listar fuentes y su estado",
+    ("/sources/{source_id}/versions", "get"): "Curaduría: versiones de una fuente",
+    ("/source-versions/{version_id}/chunks", "get"): "Curaduría: fragmentos de una versión",
+    ("/source-versions/{version_id}/retire", "post"): "Retirar una fuente desactualizada",
+    ("/businesses/{business_id}", "patch"): "Corregir datos del emprendimiento",
+    ("/businesses/{business_id}", "delete"): "Borrado lógico del emprendimiento",
+    ("/finance/movements/{movement_id}", "patch"): "Corregir un movimiento mal registrado",
+    ("/finance/movements/{movement_id}", "delete"): "Borrado lógico de un movimiento",
+    ("/finance/costs/{cost_id}", "patch"): "Corregir un costo",
+    ("/finance/costs/{cost_id}", "delete"): "Borrado lógico de un costo",
+    ("/consents", "get"): "Leer el consentimiento vigente por finalidad",
+}
+
+#: Schemas que cambian respecto de v0.2.0. El cambio debe ser aditivo: se
+#: comprueba que ninguna propiedad previa desaparezca ni se altere.
+APPROVED_SCHEMA_CHANGES = {
+    "UserView": "v0.3.0 añade roles y permissions para condicionar la interfaz por capacidad",
+}
 
 
-def test_openapi_matches_frozen_snapshot() -> None:
-    """La superficie HTTP es idéntica a la de v0.1.0."""
+def _operations(spec: dict) -> dict[tuple[str, str], dict]:
+    return {
+        (path, method): operation
+        for path, item in spec["paths"].items()
+        for method, operation in item.items()
+        if method in METHODS
+    }
+
+
+@pytest.fixture(scope="module")
+def current() -> dict:
     from app.main import app
 
-    expected = json.loads((CONTRACTS / "openapi_v0_1.json").read_text(encoding="utf-8"))
-    actual = json.loads(json.dumps(app.openapi()))
-
-    assert not APPROVED_OPENAPI_DIFFERENCES, "hay diferencias aprobadas sin reflejar"
-    assert actual["paths"].keys() == expected["paths"].keys()
-    for path in expected["paths"]:
-        assert actual["paths"][path] == expected["paths"][path], f"cambió la ruta {path}"
-    assert actual["components"]["schemas"] == expected["components"]["schemas"]
+    return json.loads(json.dumps(app.openapi()))
 
 
-def test_operation_count_is_preserved() -> None:
-    """Las 26 operaciones de la API siguen expuestas."""
-    from app.main import app
+def test_no_baseline_operation_disappeared(current) -> None:
+    """Ninguna operación publicada en v0.2.0 puede desaparecer."""
+    missing = set(_operations(BASELINE)) - set(_operations(current))
+    assert not missing, f"operaciones eliminadas: {sorted(missing)}"
 
-    paths = app.openapi()["paths"]
-    methods = {"get", "post", "put", "patch", "delete"}
-    operations = [(p, m) for p, item in paths.items() for m in item if m in methods]
-    assert len(operations) == 26
+
+def test_baseline_operations_are_unchanged(current) -> None:
+    """Las operaciones heredadas conservan schemas, códigos y seguridad."""
+    baseline, actual = _operations(BASELINE), _operations(current)
+    for key, operation in baseline.items():
+        assert actual[key] == operation, f"cambió la operación {key[1].upper()} {key[0]}"
+
+
+def test_new_operations_are_declared(current) -> None:
+    """Una ruta nueva sin declarar hace fallar la batería a propósito."""
+    added = set(_operations(current)) - set(_operations(BASELINE))
+    undeclared = added - set(APPROVED_NEW_OPERATIONS)
+    assert not undeclared, (
+        f"operaciones nuevas sin declarar en APPROVED_NEW_OPERATIONS: {sorted(undeclared)}"
+    )
+
+
+def test_schema_changes_are_declared_and_additive(current) -> None:
+    """Un schema puede ganar propiedades, nunca perderlas ni cambiarlas."""
+    old = BASELINE["components"]["schemas"]
+    new = current["components"]["schemas"]
+
+    assert not set(old) - set(new), f"schemas eliminados: {sorted(set(old) - set(new))}"
+
+    for name, definition in old.items():
+        if definition == new[name]:
+            continue
+        assert name in APPROVED_SCHEMA_CHANGES, f"cambio de schema sin declarar: {name}"
+        previous = definition.get("properties", {})
+        current_properties = new[name].get("properties", {})
+        for field, shape in previous.items():
+            assert field in current_properties, f"{name}.{field} desapareció"
+            assert current_properties[field] == shape, f"{name}.{field} cambió de forma"
 
 
 @requires_database
 def test_database_schema_matches_frozen_fingerprint(migrated_database) -> None:
-    """Las 62 tablas, índices, vistas y triggers no cambiaron."""
+    """Las 62 tablas, índices, vistas y triggers no cambiaron.
+
+    v0.3.0 no toca el esquema: toda su funcionalidad se apoya en columnas que ya
+    existían (`deleted_at`, `source_status_history`, `user_consents`).
+    """
     expected = json.loads((CONTRACTS / "schema_v0_1.json").read_text(encoding="utf-8"))
     engine = create_engine(os.environ["DATABASE_URL"])
     actual = build_fingerprint(engine)
+    engine.dispose()
 
     assert actual["table_count"] == 62
     assert actual["tables"] == expected["tables"]
@@ -73,11 +135,6 @@ def test_mariadb_specific_objects_are_live(migrated_database) -> None:
 
 
 def test_test_database_url_is_configured_in_ci() -> None:
-    """Avisa cuando la integración con MariaDB se está saltando en silencio.
-
-    `v0.1.0` dejaba `test_mariadb_integration` sin ejecutar salvo que alguien
-    definiera `TEST_DATABASE_URL` a mano, así que la única prueba que tocaba la
-    base nunca corría. En CI la variable es obligatoria.
-    """
+    """Avisa cuando la integración con MariaDB se está saltando en silencio."""
     if os.getenv("CI") and not TEST_DATABASE_URL:
         pytest.fail("En CI, TEST_DATABASE_URL debe apuntar a una MariaDB real")

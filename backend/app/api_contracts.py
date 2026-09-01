@@ -47,6 +47,11 @@ class UserView(BaseModel):
     status: str
     locale: str
     timezone: str
+    #: Códigos de rol, para mostrar quién es la usuaria.
+    roles: list[str] = Field(default_factory=list)
+    #: Códigos de permiso, los mismos que verifica `assert_permission`. La
+    #: interfaz se condiciona por capacidad y no por un rol adivinado.
+    permissions: list[str] = Field(default_factory=list)
 
 
 class BusinessCreate(BaseModel):

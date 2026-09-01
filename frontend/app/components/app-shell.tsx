@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  BookOpenCheck,
   ShieldCheck,
   Sparkles,
   WalletCards,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { clearTokens } from '../lib/api';
+import { useSession } from '../lib/session';
 
 const links = [
   { href: '/', label: 'Inicio', icon: LayoutDashboard },
@@ -22,6 +24,12 @@ const links = [
   { href: '/finanzas', label: 'Finanzas', icon: WalletCards },
   { href: '/asistente', label: 'Asistente', icon: Bot },
   { href: '/privacidad', label: 'Privacidad', icon: ShieldCheck },
+  {
+    href: '/curaduria',
+    label: 'Curaduría',
+    icon: BookOpenCheck,
+    permission: 'source.review',
+  },
 ];
 
 export function AppShell({
@@ -38,6 +46,11 @@ export function AppShell({
   const path = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const { has } = useSession();
+  // Solo se muestra lo que la usuaria realmente puede hacer.
+  const visible = links.filter(
+    (link) => !link.permission || has(link.permission),
+  );
   function logout() {
     clearTokens();
     router.push('/login');
@@ -68,7 +81,7 @@ export function AppShell({
           </button>
         </div>
         <nav className="space-y-1">
-          {links.map(({ href, label, icon: Icon }) => (
+          {visible.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
