@@ -32,7 +32,9 @@
             "type": "string"
           }
         },
-        "required": ["message"],
+        "required": [
+          "message"
+        ],
         "title": "AssistantQueryRequest",
         "type": "object"
       },
@@ -69,7 +71,13 @@
             "title": "Warning"
           }
         },
-        "required": ["answer", "citations", "warning", "abstained", "trace_id"],
+        "required": [
+          "answer",
+          "citations",
+          "warning",
+          "abstained",
+          "trace_id"
+        ],
         "title": "AssistantQueryResponse",
         "type": "object"
       },
@@ -112,12 +120,22 @@
             "type": "string"
           },
           "stage": {
-            "enum": ["IDEA", "STARTUP", "OPERATING", "GROWING", "PAUSED"],
+            "enum": [
+              "IDEA",
+              "STARTUP",
+              "OPERATING",
+              "GROWING",
+              "PAUSED"
+            ],
             "title": "Stage",
             "type": "string"
           }
         },
-        "required": ["name", "stage", "activity"],
+        "required": [
+          "name",
+          "stage",
+          "activity"
+        ],
         "title": "BusinessCreate",
         "type": "object"
       },
@@ -164,7 +182,13 @@
             "type": "string"
           },
           "stage": {
-            "enum": ["IDEA", "STARTUP", "OPERATING", "GROWING", "PAUSED"],
+            "enum": [
+              "IDEA",
+              "STARTUP",
+              "OPERATING",
+              "GROWING",
+              "PAUSED"
+            ],
             "title": "Stage",
             "type": "string"
           },
@@ -173,7 +197,13 @@
             "type": "string"
           }
         },
-        "required": ["name", "stage", "activity", "id", "status"],
+        "required": [
+          "name",
+          "stage",
+          "activity",
+          "id",
+          "status"
+        ],
         "title": "BusinessView",
         "type": "object"
       },
@@ -234,12 +264,20 @@
       "ConsentDecision": {
         "properties": {
           "decision": {
-            "enum": ["GRANTED", "WITHDRAWN"],
+            "enum": [
+              "GRANTED",
+              "WITHDRAWN"
+            ],
             "title": "Decision",
             "type": "string"
           },
           "purpose_code": {
-            "enum": ["ACCOUNT", "AUDIO", "RESEARCH", "SECONDARY_USE"],
+            "enum": [
+              "ACCOUNT",
+              "AUDIO",
+              "RESEARCH",
+              "SECONDARY_USE"
+            ],
             "title": "Purpose Code",
             "type": "string"
           },
@@ -248,7 +286,11 @@
             "type": "string"
           }
         },
-        "required": ["purpose_code", "version", "decision"],
+        "required": [
+          "purpose_code",
+          "version",
+          "decision"
+        ],
         "title": "ConsentDecision",
         "type": "object"
       },
@@ -259,7 +301,10 @@
             "type": "boolean"
           },
           "contact_type": {
-            "enum": ["EMAIL", "PHONE"],
+            "enum": [
+              "EMAIL",
+              "PHONE"
+            ],
             "title": "Contact Type",
             "type": "string"
           },
@@ -276,7 +321,12 @@
             "type": "string"
           }
         },
-        "required": ["contact_type", "value", "password", "accept_account_terms"],
+        "required": [
+          "contact_type",
+          "value",
+          "password",
+          "accept_account_terms"
+        ],
         "title": "ContactRegistration",
         "type": "object"
       },
@@ -370,7 +420,14 @@
             "type": "string"
           }
         },
-        "required": ["id", "business_id", "title", "topic_code", "status", "updated_at"],
+        "required": [
+          "id",
+          "business_id",
+          "title",
+          "topic_code",
+          "status",
+          "updated_at"
+        ],
         "title": "ConversationView",
         "type": "object"
       },
@@ -394,7 +451,10 @@
             "type": "string"
           },
           "cost_type": {
-            "enum": ["FIXED", "VARIABLE"],
+            "enum": [
+              "FIXED",
+              "VARIABLE"
+            ],
             "title": "Cost Type",
             "type": "string"
           },
@@ -449,7 +509,14 @@
             "type": "string"
           }
         },
-        "required": ["business_id", "name", "cost_type", "amount", "unit", "periodicity"],
+        "required": [
+          "business_id",
+          "name",
+          "cost_type",
+          "amount",
+          "unit",
+          "periodicity"
+        ],
         "title": "CostItemCreate",
         "type": "object"
       },
@@ -461,7 +528,9 @@
             "type": "string"
           }
         },
-        "required": ["confirmation"],
+        "required": [
+          "confirmation"
+        ],
         "title": "DeleteAccountRequest",
         "type": "object"
       },
@@ -480,7 +549,11 @@
             "title": "Comment"
           },
           "feedback_type": {
-            "enum": ["USEFUL", "ERROR", "OUTDATED_SOURCE"],
+            "enum": [
+              "USEFUL",
+              "ERROR",
+              "OUTDATED_SOURCE"
+            ],
             "title": "Feedback Type",
             "type": "string"
           },
@@ -489,7 +562,10 @@
             "type": "string"
           }
         },
-        "required": ["message_id", "feedback_type"],
+        "required": [
+          "message_id",
+          "feedback_type"
+        ],
         "title": "FeedbackCreate",
         "type": "object"
       },
@@ -526,7 +602,10 @@
           "counter_scope": {
             "anyOf": [
               {
-                "enum": ["BUSINESS", "HOUSEHOLD"],
+                "enum": [
+                  "BUSINESS",
+                  "HOUSEHOLD"
+                ],
                 "type": "string"
               },
               {
@@ -542,7 +621,12 @@
             "type": "string"
           },
           "movement_type": {
-            "enum": ["INCOME", "EXPENSE", "COST", "TRANSFER"],
+            "enum": [
+              "INCOME",
+              "EXPENSE",
+              "COST",
+              "TRANSFER"
+            ],
             "title": "Movement Type",
             "type": "string"
           },
@@ -564,12 +648,21 @@
             "type": "string"
           },
           "scope": {
-            "enum": ["BUSINESS", "HOUSEHOLD"],
+            "enum": [
+              "BUSINESS",
+              "HOUSEHOLD"
+            ],
             "title": "Scope",
             "type": "string"
           }
         },
-        "required": ["category_id", "movement_type", "scope", "amount", "occurred_on"],
+        "required": [
+          "category_id",
+          "movement_type",
+          "scope",
+          "amount",
+          "occurred_on"
+        ],
         "title": "FinancialMovementCreate",
         "type": "object"
       },
@@ -681,7 +774,10 @@
             "type": "string"
           }
         },
-        "required": ["contact", "password"],
+        "required": [
+          "contact",
+          "password"
+        ],
         "title": "LoginRequest",
         "type": "object"
       },
@@ -739,7 +835,13 @@
             "title": "Units"
           }
         },
-        "required": ["business_id", "product_name", "units", "margin_percent", "cost_item_ids"],
+        "required": [
+          "business_id",
+          "product_name",
+          "units",
+          "margin_percent",
+          "cost_item_ids"
+        ],
         "title": "PricingScenarioCreate",
         "type": "object"
       },
@@ -752,7 +854,9 @@
             "type": "string"
           }
         },
-        "required": ["refresh_token"],
+        "required": [
+          "refresh_token"
+        ],
         "title": "RefreshRequest",
         "type": "object"
       },
@@ -778,7 +882,10 @@
             "title": "Verification Token"
           }
         },
-        "required": ["user_id", "message"],
+        "required": [
+          "user_id",
+          "message"
+        ],
         "title": "RegistrationResult",
         "type": "object"
       },
@@ -828,7 +935,12 @@
             "type": "integer"
           }
         },
-        "required": ["source_version_id", "chunk_number", "content", "token_count"],
+        "required": [
+          "source_version_id",
+          "chunk_number",
+          "content",
+          "token_count"
+        ],
         "title": "SourceChunkCreate",
         "type": "object"
       },
@@ -876,7 +988,12 @@
             "type": "string"
           }
         },
-        "required": ["publisher_id", "title", "canonical_url", "topic"],
+        "required": [
+          "publisher_id",
+          "title",
+          "canonical_url",
+          "topic"
+        ],
         "title": "SourceCreate",
         "type": "object"
       },
@@ -940,7 +1057,12 @@
             "type": "string"
           }
         },
-        "required": ["source_id", "version_label", "content_hash", "storage_key"],
+        "required": [
+          "source_id",
+          "version_label",
+          "content_hash",
+          "storage_key"
+        ],
         "title": "SourceVersionCreate",
         "type": "object"
       },
@@ -964,7 +1086,11 @@
             "type": "string"
           }
         },
-        "required": ["access_token", "refresh_token", "expires_in"],
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expires_in"
+        ],
         "title": "TokenPair",
         "type": "object"
       },
@@ -987,7 +1113,12 @@
             "type": "string"
           }
         },
-        "required": ["id", "status", "locale", "timezone"],
+        "required": [
+          "id",
+          "status",
+          "locale",
+          "timezone"
+        ],
         "title": "UserView",
         "type": "object"
       },
@@ -1023,7 +1154,11 @@
             "type": "string"
           }
         },
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError",
         "type": "object"
       },
@@ -1036,7 +1171,9 @@
             "type": "string"
           }
         },
-        "required": ["token"],
+        "required": [
+          "token"
+        ],
         "title": "VerifyContactRequest",
         "type": "object"
       }
@@ -1095,7 +1232,9 @@
           }
         ],
         "summary": "Assistant Query",
-        "tags": ["assistant"]
+        "tags": [
+          "assistant"
+        ]
       }
     },
     "/auth/login": {
@@ -1134,7 +1273,9 @@
           }
         },
         "summary": "Login",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/auth/logout": {
@@ -1182,7 +1323,9 @@
           }
         ],
         "summary": "Logout",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/auth/refresh": {
@@ -1221,7 +1364,9 @@
           }
         },
         "summary": "Refresh",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/auth/register": {
@@ -1260,7 +1405,9 @@
           }
         },
         "summary": "Register",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/auth/verify-contact": {
@@ -1303,7 +1450,9 @@
           }
         },
         "summary": "Verify Contact",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/businesses": {
@@ -1331,7 +1480,9 @@
           }
         ],
         "summary": "List Businesses",
-        "tags": ["businesses"]
+        "tags": [
+          "businesses"
+        ]
       },
       "post": {
         "operationId": "create_business_businesses_post",
@@ -1373,7 +1524,9 @@
           }
         ],
         "summary": "Create Business",
-        "tags": ["businesses"]
+        "tags": [
+          "businesses"
+        ]
       }
     },
     "/consents": {
@@ -1421,7 +1574,9 @@
           }
         ],
         "summary": "Decide Consent",
-        "tags": ["privacy"]
+        "tags": [
+          "privacy"
+        ]
       }
     },
     "/conversations": {
@@ -1449,7 +1604,9 @@
           }
         ],
         "summary": "List Conversations",
-        "tags": ["assistant"]
+        "tags": [
+          "assistant"
+        ]
       },
       "post": {
         "operationId": "create_conversation_conversations_post",
@@ -1491,7 +1648,9 @@
           }
         ],
         "summary": "Create Conversation",
-        "tags": ["assistant"]
+        "tags": [
+          "assistant"
+        ]
       }
     },
     "/feedback": {
@@ -1539,7 +1698,9 @@
           }
         ],
         "summary": "Create Feedback",
-        "tags": ["assistant"]
+        "tags": [
+          "assistant"
+        ]
       }
     },
     "/finance/categories": {
@@ -1570,7 +1731,9 @@
           }
         ],
         "summary": "List Financial Categories",
-        "tags": ["finance"]
+        "tags": [
+          "finance"
+        ]
       }
     },
     "/finance/costs": {
@@ -1618,7 +1781,9 @@
           }
         ],
         "summary": "Create Cost",
-        "tags": ["finance"]
+        "tags": [
+          "finance"
+        ]
       }
     },
     "/finance/movements": {
@@ -1708,7 +1873,9 @@
           }
         ],
         "summary": "List Movements",
-        "tags": ["finance"]
+        "tags": [
+          "finance"
+        ]
       },
       "post": {
         "operationId": "create_movement_finance_movements_post",
@@ -1750,7 +1917,9 @@
           }
         ],
         "summary": "Create Movement",
-        "tags": ["finance"]
+        "tags": [
+          "finance"
+        ]
       }
     },
     "/finance/pricing": {
@@ -1798,7 +1967,9 @@
           }
         ],
         "summary": "Create Pricing Scenario",
-        "tags": ["finance"]
+        "tags": [
+          "finance"
+        ]
       }
     },
     "/finance/summary": {
@@ -1881,7 +2052,9 @@
           }
         ],
         "summary": "Financial Summary",
-        "tags": ["finance"]
+        "tags": [
+          "finance"
+        ]
       }
     },
     "/health": {
@@ -1904,7 +2077,9 @@
           }
         },
         "summary": "Health",
-        "tags": ["system"]
+        "tags": [
+          "system"
+        ]
       }
     },
     "/me": {
@@ -1928,7 +2103,9 @@
           }
         ],
         "summary": "Me",
-        "tags": ["account"]
+        "tags": [
+          "account"
+        ]
       }
     },
     "/privacy/deletion": {
@@ -1976,7 +2153,9 @@
           }
         ],
         "summary": "Request Account Deletion",
-        "tags": ["privacy"]
+        "tags": [
+          "privacy"
+        ]
       }
     },
     "/privacy/export": {
@@ -2004,7 +2183,9 @@
           }
         ],
         "summary": "Request Data Export",
-        "tags": ["privacy"]
+        "tags": [
+          "privacy"
+        ]
       }
     },
     "/source-chunks": {
@@ -2052,7 +2233,9 @@
           }
         ],
         "summary": "Create Source Chunk",
-        "tags": ["rag-admin"]
+        "tags": [
+          "rag-admin"
+        ]
       }
     },
     "/source-versions": {
@@ -2100,7 +2283,9 @@
           }
         ],
         "summary": "Create Source Version",
-        "tags": ["rag-admin"]
+        "tags": [
+          "rag-admin"
+        ]
       }
     },
     "/source-versions/{version_id}/publish": {
@@ -2149,7 +2334,9 @@
           }
         ],
         "summary": "Publish Source Version",
-        "tags": ["rag-admin"]
+        "tags": [
+          "rag-admin"
+        ]
       }
     },
     "/sources": {
@@ -2197,7 +2384,9 @@
           }
         ],
         "summary": "Create Source",
-        "tags": ["rag-admin"]
+        "tags": [
+          "rag-admin"
+        ]
       }
     }
   }

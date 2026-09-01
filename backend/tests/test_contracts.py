@@ -136,6 +136,23 @@ def test_mariadb_specific_objects_are_live(migrated_database) -> None:
     assert len(expected["triggers"]) == 2
 
 
+@pytest.mark.parametrize("name", ["openapi_v0_1", "openapi_v0_2", "schema_v0_1"])
+def test_frozen_snapshots_keep_their_canonical_form(name: str) -> None:
+    """Una línea base congelada no debe reformatearse.
+
+    Un `oxfmt` ejecutado por error sobre `backend/tests` colapsó estos archivos
+    a un elemento por línea. El contenido parseado no cambiaba, así que ninguna
+    prueba fallaba, pero un snapshot que se reescribe solo deja de servir como
+    referencia y ensucia todos los diffs posteriores.
+    """
+    path = CONTRACTS / f"{name}.json"
+    raw = path.read_text(encoding="utf-8")
+    canonical = json.dumps(
+        json.loads(raw), indent=2, ensure_ascii=False, sort_keys=True
+    )
+    assert raw == canonical + chr(10), f"{name}.json perdió su formato canónico"
+
+
 def test_test_database_url_is_configured_in_ci() -> None:
     """Avisa cuando la integración con MariaDB se está saltando en silencio."""
     if os.getenv("CI") and not TEST_DATABASE_URL:
