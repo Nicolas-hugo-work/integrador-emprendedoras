@@ -6,6 +6,52 @@ Este proyecto utiliza [versionado semántico](https://semver.org/lang/es/):
 - `MINOR` (`0.2.0`): nuevas funciones compatibles.
 - `MAJOR` (`1.0.0`): versión estable o cambios incompatibles.
 
+## [0.4.0] - 2026-09-01
+
+Los roles dejan de ser decorativos: cada uno accede solo a sus funciones. La
+API pasa de 39 a 41 operaciones y 19 endpoints existentes empiezan a exigir
+permiso.
+
+### El rol ahora significa algo
+
+- Los endpoints de emprendimientos, finanzas y conversaciones exigen sus
+  permisos (`business.manage_own`, `finance.read_own`, `finance.write_own`,
+  `conversation.manage_own`). Antes autorizaban solo por propiedad, asi que una
+  cuenta con solo `CURADORA_RAG` creaba emprendimientos y leia finanzas.
+- `/me`, `/consents` y `/privacy/*` quedan **fuera** del gateo: son derechos de
+  toda cuenta. Una curadora sigue pudiendo retirar consentimientos, descargar
+  sus datos y borrar su cuenta.
+- El login lleva a la primera pantalla que la usuaria puede abrir, en vez de al
+  panel de emprendedora fijo.
+
+### Migraciones de verdad
+
+- `alembic check` funciona por primera vez y es un paso de CI: detecta si un
+  modelo cambia sin su migracion. Antes reventaba al reflejar la columna
+  `VECTOR(768)`.
+- `0002_business_permission` es la primera migracion real, y siembra el permiso
+  que faltaba para `/businesses`.
+- Ninguna revision posterior a la inicial puede usar `create_all`, y todas
+  deben ser reversibles.
+
+### Auditoria e investigacion
+
+- `GET /audit-events` con filtros y paginado, y pantalla propia. Es el primer
+  uso de `audit.read`, el permiso que comparten `ADMINISTRADORA` y
+  `AUDITORA_INVESTIGADORA`. Nunca devuelve el identificador real de quien
+  actuo, solo su seudonimo.
+
+### Exportacion de datos
+
+- `GET /privacy/export/{id}` genera la copia en el momento y la descarga.
+  `POST /privacy/export` registraba una solicitud que nadie cumplia nunca.
+- La seleccion es una lista blanca, y una prueba comprueba que ninguna tabla
+  que la purga borra quede olvidada por la exportacion.
+
+### Sin cambios de esquema
+
+Las 62 tablas, indices, vista y triggers siguen identicos a los de `0.1.0`.
+
 ## [0.3.0] - 2026-09-01
 
 Cierra tres promesas que la aplicacion no cumplia: no se podia corregir un

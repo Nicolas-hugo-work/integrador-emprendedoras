@@ -131,6 +131,7 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/consents", "post"): Route(AUTHENTICATED),
     ("/privacy/deletion", "post"): Route(AUTHENTICATED),
     ("/privacy/export", "post"): Route(AUTHENTICATED),
+    ("/privacy/export/{request_id}", "get"): Route(AUTHENTICATED),
     ("/source-publishers", "get"): Route("source.review"),
     ("/sources", "get"): Route("source.review"),
     ("/sources", "post"): Route("source.review", _SOURCE_BODY),

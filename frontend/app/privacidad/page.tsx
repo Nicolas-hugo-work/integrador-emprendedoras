@@ -43,6 +43,7 @@ export default function PrivacyPage() {
   const [consents, setConsents] = useState<ConsentStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -103,11 +104,30 @@ export default function PrivacyPage() {
   async function requestExport() {
     setError('');
     setMessage('');
+    setExporting(true);
     try {
-      await api('/privacy/export', { method: 'POST' });
-      setMessage('Solicitud recibida. Prepararemos una copia en formato JSON.');
+      // La copia se genera en el momento de descargarla: no hay un archivo
+      // esperando en ninguna parte.
+      const solicitud = await api<{ request_id: string }>('/privacy/export', {
+        method: 'POST',
+      });
+      const contenido = await api<unknown>(
+        `/privacy/export/${solicitud.request_id}`,
+      );
+      const enlace = document.createElement('a');
+      enlace.href = URL.createObjectURL(
+        new Blob([JSON.stringify(contenido, null, 2)], {
+          type: 'application/json',
+        }),
+      );
+      enlace.download = `kawsay-mis-datos-${new Date().toISOString().slice(0, 10)}.json`;
+      enlace.click();
+      URL.revokeObjectURL(enlace.href);
+      setMessage('Tu copia se descargó en formato JSON.');
     } catch (reason) {
-      setError(describe(reason, 'No se pudo solicitar.'));
+      setError(describe(reason, 'No se pudo preparar la copia.'));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -233,10 +253,17 @@ export default function PrivacyPage() {
           <button
             type="button"
             onClick={requestExport}
-            className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left text-sm font-bold"
+            disabled={exporting}
+            className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left text-sm font-bold disabled:opacity-60"
           >
-            <Download className="size-5 text-primary" /> Solicitar copia de mis
-            datos
+            {exporting ? (
+              <LoaderCircle className="size-5 animate-spin text-primary" />
+            ) : (
+              <Download className="size-5 text-primary" />
+            )}
+            {exporting
+              ? 'Preparando tu copia…'
+              : 'Descargar copia de mis datos'}
           </button>
         </aside>
       </div>
