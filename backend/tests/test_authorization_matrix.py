@@ -125,6 +125,7 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/conversations", "get"): Route("conversation.manage_own"),
     ("/conversations", "post"): Route("conversation.manage_own", _EMPTY),
     ("/assistant/query", "post"): Route("conversation.manage_own", _QUERY_BODY),
+    ("/audit-events", "get"): Route("audit.read"),
     ("/feedback", "post"): Route("conversation.manage_own", _FEEDBACK_BODY),
     ("/consents", "get"): Route(AUTHENTICATED),
     ("/consents", "post"): Route(AUTHENTICATED),

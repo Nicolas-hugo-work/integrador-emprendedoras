@@ -14,10 +14,20 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.core.exceptions import AppError
-from app.routers import account, assistant, auth, businesses, finance, privacy, sources, system
+from app.routers import (
+    account,
+    assistant,
+    audit,
+    auth,
+    businesses,
+    finance,
+    privacy,
+    sources,
+    system,
+)
 
 #: El orden determina el de las rutas en el documento OpenAPI.
-ROUTERS = (system, auth, account, businesses, finance, assistant, privacy, sources)
+ROUTERS = (system, auth, account, businesses, finance, assistant, privacy, sources, audit)
 
 
 def create_app() -> FastAPI:

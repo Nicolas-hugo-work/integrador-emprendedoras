@@ -5,6 +5,7 @@ import {
   Bot,
   Goal,
   LayoutDashboard,
+  ScrollText,
   ShieldCheck,
   WalletCards,
   type LucideIcon,
@@ -57,6 +58,12 @@ export const NAV_LINKS: NavLink[] = [
     label: 'Curaduría',
     icon: BookOpenCheck,
     permission: 'source.review',
+  },
+  {
+    href: '/auditoria',
+    label: 'Auditoría',
+    icon: ScrollText,
+    permission: 'audit.read',
   },
   // Privacidad va última y sin permiso a propósito: es un derecho de toda
   // cuenta, y así queda como refugio de un rol sin ninguna función.
