@@ -2,35 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Bot,
-  Goal,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  BookOpenCheck,
-  ShieldCheck,
-  Sparkles,
-  WalletCards,
-  X,
-} from 'lucide-react';
+import { LogOut, Menu, Sparkles, X } from 'lucide-react';
 import { useState } from 'react';
 import { clearTokens } from '../lib/api';
-import { useSession } from '../lib/session';
-
-const links = [
-  { href: '/', label: 'Inicio', icon: LayoutDashboard },
-  { href: '/emprendimiento', label: 'Mi negocio', icon: Goal },
-  { href: '/finanzas', label: 'Finanzas', icon: WalletCards },
-  { href: '/asistente', label: 'Asistente', icon: Bot },
-  { href: '/privacidad', label: 'Privacidad', icon: ShieldCheck },
-  {
-    href: '/curaduria',
-    label: 'Curaduría',
-    icon: BookOpenCheck,
-    permission: 'source.review',
-  },
-];
+import { useNavLinks } from '../lib/navigation';
 
 export function AppShell({
   title,
@@ -46,11 +21,8 @@ export function AppShell({
   const path = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const { has } = useSession();
   // Solo se muestra lo que la usuaria realmente puede hacer.
-  const visible = links.filter(
-    (link) => !link.permission || has(link.permission),
-  );
+  const visible = useNavLinks();
   function logout() {
     clearTokens();
     router.push('/login');
