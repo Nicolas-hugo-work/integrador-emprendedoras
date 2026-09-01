@@ -56,26 +56,48 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Preparar la base del ciclo de migración
+        # Se usa PyMySQL, ya instalado como dependencia, en lugar del cliente
+        # `mariadb`: el runner de GitHub no trae ningún cliente de MySQL.
         run: |
-          mariadb -h 127.0.0.1 -u root -pci_root_password \
-            -e "CREATE DATABASE IF NOT EXISTS kawsay_migration
-                CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          python - <<'PY'
+          import time
+
+          import pymysql
+
+          for intento in range(30):
+              try:
+                  conexion = pymysql.connect(
+                      host="127.0.0.1", port=3306, user="root",
+                      password="ci_root_password",
+                  )
+                  break
+              except pymysql.err.OperationalError:
+                  time.sleep(2)
+          else:
+              raise SystemExit("MariaDB no aceptó conexiones")
+
+          with conexion.cursor() as cursor:
+              cursor.execute(
+                  "CREATE DATABASE IF NOT EXISTS kawsay_migration "
+                  "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+              )
+          conexion.close()
+          print("kawsay_migration lista")
+          PY
 
       - name: Análisis estático
         run: ruff check app tests
 
       - name: Pruebas
         # TEST_DATABASE_URL y TEST_MIGRATION_DATABASE_URL están definidas, así
-        # que la integración con MariaDB se ejecuta en lugar de saltarse.
-        run: pytest -q
-
-      - name: Verificar que ninguna prueba de MariaDB quedó omitida
+        # que la integración con MariaDB se ejecuta en lugar de saltarse. Si
+        # alguna prueba queda omitida, el trabajo falla: en v0.1.0 la única
+        # prueba que tocaba la base se saltaba siempre en silencio.
         run: |
-          pytest -q --collect-only tests/test_mariadb_integration.py > /dev/null
-          pytest tests/test_mariadb_integration.py tests/test_contracts.py -q -rs \
-            | tee resultado.txt
-          if grep -q "skipped" resultado.txt; then
-            echo "::error::Hay pruebas de integración omitidas; revise las variables de entorno"
+          set -o pipefail
+          pytest -q -rs | tee resultado.txt
+          if grep -qE "[0-9]+ skipped" resultado.txt; then
+            echo "::error::Hay pruebas omitidas; revise TEST_DATABASE_URL y TEST_MIGRATION_DATABASE_URL"
             exit 1
           fi
 
