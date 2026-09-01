@@ -113,6 +113,63 @@ class CostItemCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
+class CostItemView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    business_id: str
+    name: str
+    cost_type: str
+    amount: Decimal
+    currency: str
+    unit: str
+    periodicity: str
+    quantity_base: Decimal
+    notes: str | None = None
+
+
+class CostItemUpdate(BaseModel):
+    """Actualización parcial: solo se escriben los campos presentes."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=180)
+    cost_type: Literal["FIXED", "VARIABLE"] | None = None
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    unit: str | None = Field(default=None, min_length=1, max_length=40)
+    periodicity: str | None = Field(default=None, min_length=1, max_length=32)
+    quantity_base: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=4)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class FinancialMovementUpdate(BaseModel):
+    """Actualización parcial de un movimiento.
+
+    La coherencia de una transferencia no puede validarse aquí: un `PATCH`
+    parcial no conoce el estado final. El servicio fusiona los campos sobre la
+    fila existente y recién entonces llama a `domain_rules.validate_transfer`,
+    de modo que la regla sigue teniendo un solo hogar.
+    """
+
+    category_id: str | None = None
+    movement_type: Literal["INCOME", "EXPENSE", "COST", "TRANSFER"] | None = None
+    scope: Literal["BUSINESS", "HOUSEHOLD"] | None = None
+    counter_scope: Literal["BUSINESS", "HOUSEHOLD"] | None = None
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    occurred_on: date | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class BusinessUpdate(BaseModel):
+    """Actualización parcial de un emprendimiento."""
+
+    name: str | None = Field(default=None, min_length=2, max_length=180)
+    stage: Literal["IDEA", "STARTUP", "OPERATING", "GROWING", "PAUSED"] | None = None
+    activity: str | None = Field(default=None, min_length=2, max_length=180)
+    department_code: str | None = Field(default=None, max_length=8)
+    municipality: str | None = Field(default=None, max_length=120)
+
+
 class ConversationCreate(BaseModel):
     business_id: str | None = None
     title: str | None = Field(default=None, max_length=180)

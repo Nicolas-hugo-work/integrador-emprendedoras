@@ -37,6 +37,7 @@ APPROVED_NEW_OPERATIONS = {
     ("/businesses/{business_id}", "delete"): "Borrado lógico del emprendimiento",
     ("/finance/movements/{movement_id}", "patch"): "Corregir un movimiento mal registrado",
     ("/finance/movements/{movement_id}", "delete"): "Borrado lógico de un movimiento",
+    ("/finance/costs", "get"): "Listar costos para poder corregirlos",
     ("/finance/costs/{cost_id}", "patch"): "Corregir un costo",
     ("/finance/costs/{cost_id}", "delete"): "Borrado lógico de un costo",
     ("/consents", "get"): "Leer el consentimiento vigente por finalidad",

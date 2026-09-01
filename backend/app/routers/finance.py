@@ -6,7 +6,10 @@ from fastapi import APIRouter, Query
 
 from app.api_contracts import (
     CostItemCreate,
+    CostItemUpdate,
+    CostItemView,
     FinancialMovementCreate,
+    FinancialMovementUpdate,
     FinancialMovementView,
     PricingScenarioCreate,
 )
@@ -41,9 +44,38 @@ def list_movements(
     )
 
 
+@router.patch("/movements/{movement_id}", response_model=FinancialMovementView)
+def update_movement(
+    movement_id: str, payload: FinancialMovementUpdate, db: DB, user: CurrentUser
+) -> FinancialMovementView:
+    return finance_service.update_movement(db, user, movement_id, payload)
+
+
+@router.delete("/movements/{movement_id}", status_code=204)
+def delete_movement(movement_id: str, db: DB, user: CurrentUser) -> None:
+    finance_service.delete_movement(db, user, movement_id)
+
+
+@router.get("/costs", response_model=list[CostItemView])
+def list_costs(db: DB, user: CurrentUser, business_id: str) -> list[CostItemView]:
+    return finance_service.list_costs(db, user, business_id=business_id)
+
+
 @router.post("/costs", status_code=201)
 def create_cost(payload: CostItemCreate, db: DB, user: CurrentUser) -> dict[str, str]:
     return finance_service.create_cost(db, user, payload)
+
+
+@router.patch("/costs/{cost_id}", response_model=CostItemView)
+def update_cost(
+    cost_id: str, payload: CostItemUpdate, db: DB, user: CurrentUser
+) -> CostItemView:
+    return finance_service.update_cost(db, user, cost_id, payload)
+
+
+@router.delete("/costs/{cost_id}", status_code=204)
+def delete_cost(cost_id: str, db: DB, user: CurrentUser) -> None:
+    finance_service.delete_cost(db, user, cost_id)
 
 
 @router.post("/pricing")
