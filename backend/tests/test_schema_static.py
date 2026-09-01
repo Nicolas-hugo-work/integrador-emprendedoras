@@ -65,7 +65,15 @@ class SchemaStaticTest(unittest.TestCase):
         self.assertIn("content_encrypted", model_text)
 
     def test_api_contract_routes_are_present(self) -> None:
-        main = (ROOT / "app" / "main.py").read_text(encoding="utf-8")
+        """Las rutas se comprueban sobre el documento OpenAPI, no sobre `main.py`.
+
+        La versión anterior leía `app/main.py` como texto y buscaba literales de
+        ruta, de modo que fallaba en cuanto los endpoints pasaban a routers
+        aunque la API siguiera siendo idéntica.
+        """
+        from app.main import app
+
+        paths = set(app.openapi()["paths"])
         for route in (
             "/businesses",
             "/consents",
@@ -75,7 +83,7 @@ class SchemaStaticTest(unittest.TestCase):
             "/feedback",
             "/source-versions",
         ):
-            self.assertIn(route, main)
+            self.assertIn(route, paths)
 
 
 if __name__ == "__main__":
