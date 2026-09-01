@@ -22,6 +22,10 @@ backend/scripts/graphify-out/
 # Residuos del scaffold inicial; la aplicación usa únicamente frontend/app.
 frontend/.openai/
 frontend/.ox*
+# ...salvo la configuración de oxlint y oxfmt: desde v0.2.0 `npm run lint`
+# es una compuerta de CI y debe comportarse igual en local que en el runner.
+!frontend/.oxlintrc.json
+!frontend/.oxfmtrc.json
 frontend/AGENTS.md
 frontend/CLAUDE.md
 frontend/components/

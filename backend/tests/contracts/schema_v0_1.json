@@ -1,0 +1,1579 @@
+{
+  "columns": {
+    "ai_retrievals": [
+      "ai_run_id char(36) NOT NULL default=None extra=''",
+      "chunk_embedding_id char(36) NOT NULL default=None extra=''",
+      "distance decimal(12,9) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "rank_position int(11) NOT NULL default=None extra=''",
+      "selected_for_prompt tinyint(1) NOT NULL default=None extra=''"
+    ],
+    "ai_runs": [
+      "abstained tinyint(1) NOT NULL default=None extra=''",
+      "assistant_message_id char(36) NULL default='NULL' extra=''",
+      "completion_tokens int(11) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "latency_ms int(11) NULL default='NULL' extra=''",
+      "model_name varchar(180) NOT NULL default=None extra=''",
+      "model_version varchar(80) NOT NULL default=None extra=''",
+      "prompt_policy_version varchar(40) NOT NULL default=None extra=''",
+      "prompt_tokens int(11) NULL default='NULL' extra=''",
+      "response_status varchar(16) NOT NULL default=None extra=''",
+      "safety_flags longtext NULL default='NULL' extra=''",
+      "trace_id varchar(64) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "audio_artifacts": [
+      "confirmed_at datetime(6) NULL default='NULL' extra=''",
+      "consent_event_id char(36) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "duration_ms int(11) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "message_id char(36) NULL default='NULL' extra=''",
+      "mime_type varchar(100) NOT NULL default=None extra=''",
+      "purge_at datetime(6) NOT NULL default=None extra=''",
+      "storage_key varchar(500) NOT NULL default=None extra=''",
+      "transcription_status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "audit_events": [
+      "action varchar(100) NOT NULL default=None extra=''",
+      "actor_pseudonym varchar(128) NOT NULL default=None extra=''",
+      "actor_user_id varchar(36) NULL default='NULL' extra=''",
+      "correlation_id varchar(64) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "integrity_hash varchar(64) NOT NULL default=None extra=''",
+      "ip_hash varchar(128) NULL default='NULL' extra=''",
+      "metadata_json longtext NULL default='NULL' extra=''",
+      "object_id varchar(36) NULL default='NULL' extra=''",
+      "object_type varchar(80) NOT NULL default=None extra=''",
+      "occurred_at datetime(6) NOT NULL default=None extra=''",
+      "previous_hash varchar(64) NULL default='NULL' extra=''",
+      "result varchar(12) NOT NULL default=None extra=''"
+    ],
+    "auth_challenges": [
+      "attempt_count int(11) NOT NULL default=None extra=''",
+      "consumed_at datetime(6) NULL default='NULL' extra=''",
+      "contact_id char(36) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "expires_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "purpose varchar(24) NOT NULL default=None extra=''",
+      "token_hash varchar(128) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "background_jobs": [
+      "attempts int(11) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "error_message text NULL default='NULL' extra=''",
+      "finished_at datetime(6) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "job_type varchar(80) NOT NULL default=None extra=''",
+      "payload_json longtext NOT NULL default=None extra=''",
+      "scheduled_at datetime(6) NOT NULL default=None extra=''",
+      "started_at datetime(6) NULL default='NULL' extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "business_channels": [
+      "business_id char(36) NOT NULL default=None extra=''",
+      "channel_code varchar(32) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "is_active tinyint(1) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "business_goals": [
+      "business_id char(36) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "description text NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "target_date datetime(6) NULL default='NULL' extra=''",
+      "title varchar(180) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "business_memberships": [
+      "business_id char(36) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "member_role varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "business_skills": [
+      "business_id char(36) NOT NULL default=None extra=''",
+      "level int(11) NOT NULL default=None extra=''",
+      "skill_id char(36) NOT NULL default=None extra=''"
+    ],
+    "businesses": [
+      "activity varchar(180) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "department_code varchar(8) NULL default='NULL' extra=''",
+      "description text NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "municipality varchar(120) NULL default='NULL' extra=''",
+      "name varchar(180) NOT NULL default=None extra=''",
+      "owner_user_id char(36) NOT NULL default=None extra=''",
+      "stage varchar(16) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "consent_purposes": [
+      "code varchar(48) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "is_required tinyint(1) NOT NULL default=None extra=''",
+      "name varchar(120) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "withdrawal_effect varchar(500) NOT NULL default=None extra=''"
+    ],
+    "consent_versions": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "notice_hash varchar(64) NOT NULL default=None extra=''",
+      "notice_text text NOT NULL default=None extra=''",
+      "published_at datetime(6) NOT NULL default=None extra=''",
+      "purpose_id char(36) NOT NULL default=None extra=''",
+      "retired_at datetime(6) NULL default='NULL' extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "version varchar(24) NOT NULL default=None extra=''"
+    ],
+    "conversations": [
+      "business_id char(36) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "retention_expires_at datetime(6) NULL default='NULL' extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "title_encrypted text NULL default='NULL' extra=''",
+      "topic_code varchar(64) NULL default='NULL' extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "cost_items": [
+      "amount decimal(14,2) NOT NULL default=None extra=''",
+      "business_id char(36) NOT NULL default=None extra=''",
+      "cost_type varchar(12) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "currency varchar(3) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "is_active tinyint(1) NOT NULL default=None extra=''",
+      "name varchar(180) NOT NULL default=None extra=''",
+      "notes_encrypted text NULL default='NULL' extra=''",
+      "periodicity varchar(32) NOT NULL default=None extra=''",
+      "quantity_base decimal(14,4) NOT NULL default=None extra=''",
+      "unit varchar(40) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "data_export_requests": [
+      "completed_at datetime(6) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "expires_at datetime(6) NULL default='NULL' extra=''",
+      "format varchar(8) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "storage_key varchar(500) NULL default='NULL' extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "deletion_requests": [
+      "completed_at datetime(6) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "failure_reason varchar(500) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "purge_due_at datetime(6) NOT NULL default=None extra=''",
+      "requested_at datetime(6) NOT NULL default=None extra=''",
+      "scope varchar(24) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "diagnostic_answers": [
+      "answer_text_encrypted text NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "question_code varchar(64) NOT NULL default=None extra=''",
+      "session_id char(36) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "diagnostic_sessions": [
+      "business_id char(36) NOT NULL default=None extra=''",
+      "completed_at datetime(6) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "questionnaire_version varchar(24) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "embedding_models": [
+      "code varchar(100) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "dimension int(11) NOT NULL default=None extra=''",
+      "distance_metric varchar(16) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "is_active tinyint(1) NOT NULL default=None extra=''",
+      "model_name varchar(180) NOT NULL default=None extra=''",
+      "model_version varchar(80) NOT NULL default=None extra=''",
+      "provider varchar(100) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "escalation_events": [
+      "conversation_id char(36) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "official_url varchar(1000) NULL default='NULL' extra=''",
+      "reason_code varchar(64) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''",
+      "warning_snapshot text NOT NULL default=None extra=''"
+    ],
+    "evaluation_cases": [
+      "case_code varchar(64) NOT NULL default=None extra=''",
+      "category varchar(24) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "evaluation_set_id char(36) NOT NULL default=None extra=''",
+      "expected_behavior text NOT NULL default=None extra=''",
+      "expected_source_ids longtext NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "prompt_encrypted text NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "evaluation_results": [
+      "abstained tinyint(1) NOT NULL default=None extra=''",
+      "citation_present tinyint(1) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "evaluation_case_id char(36) NOT NULL default=None extra=''",
+      "evaluation_run_id char(36) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "notes text NULL default='NULL' extra=''",
+      "passed tinyint(1) NOT NULL default=None extra=''",
+      "retrieval_recall decimal(6,5) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "warning_complete tinyint(1) NOT NULL default=None extra=''"
+    ],
+    "evaluation_runs": [
+      "completed_at datetime(6) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "evaluation_set_id char(36) NOT NULL default=None extra=''",
+      "executed_by_user_id char(36) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "model_name varchar(180) NOT NULL default=None extra=''",
+      "model_version varchar(80) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "evaluation_sets": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "description text NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "is_active tinyint(1) NOT NULL default=None extra=''",
+      "name varchar(180) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "version varchar(40) NOT NULL default=None extra=''"
+    ],
+    "financial_categories": [
+      "code varchar(64) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "is_system tinyint(1) NOT NULL default=None extra=''",
+      "movement_type varchar(16) NOT NULL default=None extra=''",
+      "name varchar(120) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "financial_movements": [
+      "amount decimal(14,2) NOT NULL default=None extra=''",
+      "business_id char(36) NULL default='NULL' extra=''",
+      "category_id char(36) NOT NULL default=None extra=''",
+      "counter_scope varchar(16) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "currency varchar(3) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "movement_type varchar(16) NOT NULL default=None extra=''",
+      "note_encrypted text NULL default='NULL' extra=''",
+      "occurred_on date NOT NULL default=None extra=''",
+      "scope varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "formalization_routes": [
+      "business_id char(36) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "generated_by_ai_run_id char(36) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "formalization_steps": [
+      "completed_at datetime(6) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "description text NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "route_id char(36) NOT NULL default=None extra=''",
+      "source_version_id char(36) NULL default='NULL' extra=''",
+      "step_number int(11) NOT NULL default=None extra=''",
+      "title varchar(180) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "generated_contents": [
+      "approved_at datetime(6) NULL default='NULL' extra=''",
+      "business_id char(36) NULL default='NULL' extra=''",
+      "channel_code varchar(32) NULL default='NULL' extra=''",
+      "content_type varchar(24) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "draft_encrypted text NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "source_message_id char(36) NULL default='NULL' extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "ingestion_jobs": [
+      "completed_at datetime(6) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "error_message text NULL default='NULL' extra=''",
+      "extractor_version varchar(80) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "source_version_id char(36) NOT NULL default=None extra=''",
+      "started_at datetime(6) NULL default='NULL' extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "message_citations": [
+      "consulted_at_snapshot datetime(6) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "display_order int(11) NOT NULL default=None extra=''",
+      "excerpt_snapshot text NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "institution_snapshot varchar(240) NOT NULL default=None extra=''",
+      "message_id char(36) NOT NULL default=None extra=''",
+      "source_chunk_id char(36) NOT NULL default=None extra=''",
+      "source_version_id char(36) NOT NULL default=None extra=''",
+      "title_snapshot varchar(500) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "url_snapshot varchar(1000) NOT NULL default=None extra=''",
+      "version_snapshot varchar(120) NULL default='NULL' extra=''"
+    ],
+    "messages": [
+      "content_encrypted text NOT NULL default=None extra=''",
+      "content_hash varchar(64) NOT NULL default=None extra=''",
+      "conversation_id char(36) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "moderation_status varchar(16) NOT NULL default=None extra=''",
+      "sender varchar(16) NOT NULL default=None extra=''",
+      "sequence_number int(11) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "organization_memberships": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "member_role varchar(16) NOT NULL default=None extra=''",
+      "organization_id char(36) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "organizations": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "name varchar(180) NOT NULL default=None extra=''",
+      "slug varchar(120) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "password_credentials": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "failed_attempts int(11) NOT NULL default=None extra=''",
+      "locked_until datetime(6) NULL default='NULL' extra=''",
+      "password_changed_at datetime(6) NOT NULL default=None extra=''",
+      "password_hash varchar(255) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "permissions": [
+      "code varchar(80) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "description varchar(500) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "pricing_scenario_costs": [
+      "allocation_quantity decimal(14,4) NOT NULL default=None extra=''",
+      "amount_snapshot decimal(14,2) NOT NULL default=None extra=''",
+      "cost_item_id char(36) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "label_snapshot varchar(180) NOT NULL default=None extra=''",
+      "scenario_id char(36) NOT NULL default=None extra=''"
+    ],
+    "pricing_scenarios": [
+      "assumptions longtext NOT NULL default=None extra=''",
+      "business_id char(36) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "created_by_user_id char(36) NOT NULL default=None extra=''",
+      "currency varchar(3) NOT NULL default=None extra=''",
+      "formula_version varchar(24) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "margin_percent decimal(8,4) NOT NULL default=None extra=''",
+      "product_name varchar(180) NOT NULL default=None extra=''",
+      "suggested_price decimal(14,2) NOT NULL default=None extra=''",
+      "unit_cost decimal(14,2) NOT NULL default=None extra=''",
+      "units decimal(14,4) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "research_participants": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "encrypted_user_reference varchar(500) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "participant_code varchar(64) NOT NULL default=None extra=''",
+      "research_consent_event_id char(36) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "withdrawn_at datetime(6) NULL default='NULL' extra=''"
+    ],
+    "response_feedback": [
+      "comment_encrypted text NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "feedback_type varchar(24) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "message_id char(36) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "role_permissions": [
+      "permission_id char(36) NOT NULL default=None extra=''",
+      "role_id char(36) NOT NULL default=None extra=''"
+    ],
+    "roles": [
+      "code varchar(48) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "description varchar(500) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "is_system tinyint(1) NOT NULL default=None extra=''",
+      "name varchar(100) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "security_alerts": [
+      "alert_type varchar(80) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "description text NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "resolved_at datetime(6) NULL default='NULL' extra=''",
+      "severity varchar(12) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NULL default='NULL' extra=''"
+    ],
+    "sessions": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "device_label varchar(120) NULL default='NULL' extra=''",
+      "expires_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "ip_hash varchar(128) NULL default='NULL' extra=''",
+      "refresh_token_hash varchar(128) NOT NULL default=None extra=''",
+      "revoked_at datetime(6) NULL default='NULL' extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_agent_hash varchar(128) NULL default='NULL' extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "skills": [
+      "code varchar(64) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "name varchar(120) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "source_checks": [
+      "checked_at datetime(6) NOT NULL default=None extra=''",
+      "content_changed tinyint(1) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "http_status int(11) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "new_content_hash varchar(64) NULL default='NULL' extra=''",
+      "notes varchar(500) NULL default='NULL' extra=''",
+      "source_id char(36) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "source_chunk_embeddings": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "embedding vector(768) NOT NULL default=None extra=''",
+      "embedding_model_id char(36) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "source_chunk_id char(36) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "source_chunks": [
+      "chunk_number int(11) NOT NULL default=None extra=''",
+      "content text NOT NULL default=None extra=''",
+      "content_hash varchar(64) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "heading varchar(500) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "page_number int(11) NULL default='NULL' extra=''",
+      "source_version_id char(36) NOT NULL default=None extra=''",
+      "token_count int(11) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "source_publishers": [
+      "code varchar(32) NOT NULL default=None extra=''",
+      "country_code varchar(2) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "name varchar(240) NOT NULL default=None extra=''",
+      "official_domain varchar(255) NULL default='NULL' extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "source_status_history": [
+      "changed_at datetime(6) NOT NULL default=None extra=''",
+      "changed_by_user_id char(36) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "new_status varchar(16) NOT NULL default=None extra=''",
+      "previous_status varchar(16) NULL default='NULL' extra=''",
+      "reason varchar(500) NULL default='NULL' extra=''",
+      "source_version_id char(36) NOT NULL default=None extra=''"
+    ],
+    "source_versions": [
+      "consulted_at datetime(6) NOT NULL default=None extra=''",
+      "content_hash varchar(64) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "publication_date date NULL default='NULL' extra=''",
+      "source_id char(36) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "storage_key varchar(500) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "valid_from date NULL default='NULL' extra=''",
+      "valid_to date NULL default='NULL' extra=''",
+      "version_label varchar(120) NOT NULL default=None extra=''"
+    ],
+    "sources": [
+      "canonical_url varchar(1000) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "jurisdiction varchar(120) NOT NULL default=None extra=''",
+      "license_name varchar(180) NULL default='NULL' extra=''",
+      "publisher_id char(36) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "title varchar(500) NOT NULL default=None extra=''",
+      "topic varchar(120) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "survey_responses": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "instrument_code varchar(40) NOT NULL default=None extra=''",
+      "numeric_value decimal(8,3) NULL default='NULL' extra=''",
+      "question_code varchar(64) NOT NULL default=None extra=''",
+      "text_value_anonymized text NULL default='NULL' extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "usability_session_id char(36) NOT NULL default=None extra=''"
+    ],
+    "system_settings": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "is_sensitive tinyint(1) NOT NULL default=None extra=''",
+      "setting_key varchar(120) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "updated_by_user_id char(36) NULL default='NULL' extra=''",
+      "value_json longtext NOT NULL default=None extra=''"
+    ],
+    "task_results": [
+      "completed_without_help tinyint(1) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "duration_seconds int(11) NOT NULL default=None extra=''",
+      "error_count int(11) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "notes_anonymized text NULL default='NULL' extra=''",
+      "task_code varchar(64) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "usability_session_id char(36) NOT NULL default=None extra=''"
+    ],
+    "usability_sessions": [
+      "completed_at datetime(6) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "facilitator_code varchar(64) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "notes_anonymized text NULL default='NULL' extra=''",
+      "participant_id char(36) NOT NULL default=None extra=''",
+      "scheduled_at datetime(6) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "user_consents": [
+      "consent_version_id char(36) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "decided_at datetime(6) NOT NULL default=None extra=''",
+      "decision varchar(16) NOT NULL default=None extra=''",
+      "evidence_hash varchar(64) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "purpose_id char(36) NOT NULL default=None extra=''",
+      "source varchar(32) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "user_contacts": [
+      "contact_type varchar(8) NOT NULL default=None extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "is_primary tinyint(1) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''",
+      "value_normalized varchar(254) NOT NULL default=None extra=''",
+      "verified_at datetime(6) NULL default='NULL' extra=''"
+    ],
+    "user_preferences": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "high_contrast tinyint(1) NOT NULL default=None extra=''",
+      "reduced_motion tinyint(1) NOT NULL default=None extra=''",
+      "response_length varchar(8) NOT NULL default=None extra=''",
+      "tts_speed float NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''",
+      "voice_enabled tinyint(1) NOT NULL default=None extra=''"
+    ],
+    "user_roles": [
+      "assigned_by_user_id char(36) NULL default='NULL' extra=''",
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "role_id char(36) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ],
+    "users": [
+      "created_at datetime(6) NOT NULL default=None extra=''",
+      "deleted_at datetime(6) NULL default='NULL' extra=''",
+      "id char(36) NOT NULL default=None extra=''",
+      "last_login_at datetime(6) NULL default='NULL' extra=''",
+      "locale varchar(12) NOT NULL default=None extra=''",
+      "status varchar(16) NOT NULL default=None extra=''",
+      "timezone varchar(64) NOT NULL default=None extra=''",
+      "updated_at datetime(6) NOT NULL default=None extra=''"
+    ],
+    "v_monthly_financial_summary": [
+      "balance decimal(36,2) NULL default='NULL' extra=''",
+      "business_id char(36) NULL default='NULL' extra=''",
+      "currency varchar(3) NOT NULL default=None extra=''",
+      "period_start date NULL default='NULL' extra=''",
+      "total_income decimal(36,2) NULL default='NULL' extra=''",
+      "total_outflow decimal(36,2) NULL default='NULL' extra=''",
+      "user_id char(36) NOT NULL default=None extra=''"
+    ]
+  },
+  "constraints": {
+    "ai_retrievals": [
+      "PRIMARY PRIMARY KEY",
+      "ck_ai_retrievals_nonnegative_distance CHECK",
+      "ck_ai_retrievals_positive_rank CHECK",
+      "fk_ai_retrievals_ai_run_id_ai_runs FOREIGN KEY",
+      "fk_ai_retrievals_chunk_embedding_id_source_chunk_embeddings FOREIGN KEY",
+      "uq_ai_retrieval_rank UNIQUE"
+    ],
+    "ai_runs": [
+      "PRIMARY PRIMARY KEY",
+      "ck_ai_runs_valid_response_status CHECK",
+      "fk_ai_runs_assistant_message_id_messages FOREIGN KEY",
+      "safety_flags CHECK",
+      "uq_ai_runs_trace_id UNIQUE"
+    ],
+    "audio_artifacts": [
+      "PRIMARY PRIMARY KEY",
+      "ck_audio_artifacts_valid_transcription_status CHECK",
+      "fk_audio_artifacts_consent_event_id_user_consents FOREIGN KEY",
+      "fk_audio_artifacts_message_id_messages FOREIGN KEY",
+      "fk_audio_artifacts_user_id_users FOREIGN KEY"
+    ],
+    "audit_events": [
+      "PRIMARY PRIMARY KEY",
+      "ck_audit_events_valid_result CHECK",
+      "metadata_json CHECK",
+      "uq_audit_events_integrity_hash UNIQUE"
+    ],
+    "auth_challenges": [
+      "PRIMARY PRIMARY KEY",
+      "ck_auth_challenges_valid_purpose CHECK",
+      "fk_auth_challenges_contact_id_user_contacts FOREIGN KEY",
+      "uq_auth_challenges_token_hash UNIQUE"
+    ],
+    "background_jobs": [
+      "PRIMARY PRIMARY KEY",
+      "ck_background_jobs_valid_status CHECK",
+      "payload_json CHECK"
+    ],
+    "business_channels": [
+      "PRIMARY PRIMARY KEY",
+      "fk_business_channels_business_id_businesses FOREIGN KEY",
+      "uq_business_channel UNIQUE"
+    ],
+    "business_goals": [
+      "PRIMARY PRIMARY KEY",
+      "ck_business_goals_valid_status CHECK",
+      "fk_business_goals_business_id_businesses FOREIGN KEY"
+    ],
+    "business_memberships": [
+      "PRIMARY PRIMARY KEY",
+      "ck_business_memberships_valid_role CHECK",
+      "fk_business_memberships_business_id_businesses FOREIGN KEY",
+      "fk_business_memberships_user_id_users FOREIGN KEY",
+      "uq_business_member UNIQUE"
+    ],
+    "business_skills": [
+      "PRIMARY PRIMARY KEY",
+      "ck_business_skills_valid_level CHECK",
+      "fk_business_skills_business_id_businesses FOREIGN KEY",
+      "fk_business_skills_skill_id_skills FOREIGN KEY"
+    ],
+    "businesses": [
+      "PRIMARY PRIMARY KEY",
+      "ck_businesses_valid_stage CHECK",
+      "ck_businesses_valid_status CHECK",
+      "fk_businesses_owner_user_id_users FOREIGN KEY"
+    ],
+    "consent_purposes": [
+      "PRIMARY PRIMARY KEY",
+      "uq_consent_purposes_code UNIQUE"
+    ],
+    "consent_versions": [
+      "PRIMARY PRIMARY KEY",
+      "fk_consent_versions_purpose_id_consent_purposes FOREIGN KEY",
+      "uq_consent_versions_notice_hash UNIQUE"
+    ],
+    "conversations": [
+      "PRIMARY PRIMARY KEY",
+      "ck_conversations_valid_status CHECK",
+      "fk_conversations_business_id_businesses FOREIGN KEY",
+      "fk_conversations_user_id_users FOREIGN KEY"
+    ],
+    "cost_items": [
+      "PRIMARY PRIMARY KEY",
+      "ck_cost_items_positive_amount CHECK",
+      "ck_cost_items_positive_quantity CHECK",
+      "ck_cost_items_valid_type CHECK",
+      "fk_cost_items_business_id_businesses FOREIGN KEY"
+    ],
+    "data_export_requests": [
+      "PRIMARY PRIMARY KEY",
+      "ck_data_export_requests_valid_status CHECK",
+      "fk_data_export_requests_user_id_users FOREIGN KEY"
+    ],
+    "deletion_requests": [
+      "PRIMARY PRIMARY KEY",
+      "ck_deletion_requests_valid_status CHECK",
+      "fk_deletion_requests_user_id_users FOREIGN KEY"
+    ],
+    "diagnostic_answers": [
+      "PRIMARY PRIMARY KEY",
+      "fk_diagnostic_answers_session_id_diagnostic_sessions FOREIGN KEY",
+      "uq_diagnostic_answer UNIQUE"
+    ],
+    "diagnostic_sessions": [
+      "PRIMARY PRIMARY KEY",
+      "ck_diagnostic_sessions_valid_status CHECK",
+      "fk_diagnostic_sessions_business_id_businesses FOREIGN KEY"
+    ],
+    "embedding_models": [
+      "PRIMARY PRIMARY KEY",
+      "ck_embedding_models_cosine_only CHECK",
+      "ck_embedding_models_dimension_768 CHECK",
+      "uq_embedding_models_code UNIQUE"
+    ],
+    "escalation_events": [
+      "PRIMARY PRIMARY KEY",
+      "fk_escalation_events_conversation_id_conversations FOREIGN KEY",
+      "fk_escalation_events_user_id_users FOREIGN KEY"
+    ],
+    "evaluation_cases": [
+      "PRIMARY PRIMARY KEY",
+      "ck_evaluation_cases_valid_category CHECK",
+      "expected_source_ids CHECK",
+      "fk_evaluation_cases_evaluation_set_id_evaluation_sets FOREIGN KEY",
+      "uq_evaluation_case UNIQUE"
+    ],
+    "evaluation_results": [
+      "PRIMARY PRIMARY KEY",
+      "ck_evaluation_results_valid_recall CHECK",
+      "fk_evaluation_results_evaluation_case_id_evaluation_cases FOREIGN KEY",
+      "fk_evaluation_results_evaluation_run_id_evaluation_runs FOREIGN KEY",
+      "uq_eval_result UNIQUE"
+    ],
+    "evaluation_runs": [
+      "PRIMARY PRIMARY KEY",
+      "ck_evaluation_runs_valid_status CHECK",
+      "fk_evaluation_runs_evaluation_set_id_evaluation_sets FOREIGN KEY",
+      "fk_evaluation_runs_executed_by_user_id_users FOREIGN KEY"
+    ],
+    "evaluation_sets": [
+      "PRIMARY PRIMARY KEY",
+      "uq_evaluation_set_version UNIQUE"
+    ],
+    "financial_categories": [
+      "PRIMARY PRIMARY KEY",
+      "ck_financial_categories_valid_type CHECK",
+      "uq_financial_categories_code UNIQUE"
+    ],
+    "financial_movements": [
+      "PRIMARY PRIMARY KEY",
+      "ck_financial_movements_positive_amount CHECK",
+      "ck_financial_movements_valid_counter_scope CHECK",
+      "ck_financial_movements_valid_scope CHECK",
+      "ck_financial_movements_valid_transfer CHECK",
+      "ck_financial_movements_valid_type CHECK",
+      "fk_financial_movements_business_id_businesses FOREIGN KEY",
+      "fk_financial_movements_category_id_financial_categories FOREIGN KEY",
+      "fk_financial_movements_user_id_users FOREIGN KEY"
+    ],
+    "formalization_routes": [
+      "PRIMARY PRIMARY KEY",
+      "ck_formalization_routes_valid_status CHECK",
+      "fk_formalization_routes_business_id_businesses FOREIGN KEY",
+      "fk_formalization_routes_generated_by_ai_run_id_ai_runs FOREIGN KEY"
+    ],
+    "formalization_steps": [
+      "PRIMARY PRIMARY KEY",
+      "ck_formalization_steps_positive_step CHECK",
+      "fk_formalization_steps_route_id_formalization_routes FOREIGN KEY",
+      "fk_formalization_steps_source_version_id_source_versions FOREIGN KEY",
+      "uq_formalization_step UNIQUE"
+    ],
+    "generated_contents": [
+      "PRIMARY PRIMARY KEY",
+      "ck_generated_contents_valid_status CHECK",
+      "ck_generated_contents_valid_type CHECK",
+      "fk_generated_contents_business_id_businesses FOREIGN KEY",
+      "fk_generated_contents_source_message_id_messages FOREIGN KEY",
+      "fk_generated_contents_user_id_users FOREIGN KEY"
+    ],
+    "ingestion_jobs": [
+      "PRIMARY PRIMARY KEY",
+      "ck_ingestion_jobs_valid_status CHECK",
+      "fk_ingestion_jobs_source_version_id_source_versions FOREIGN KEY"
+    ],
+    "message_citations": [
+      "PRIMARY PRIMARY KEY",
+      "fk_message_citations_message_id_messages FOREIGN KEY",
+      "fk_message_citations_source_chunk_id_source_chunks FOREIGN KEY",
+      "fk_message_citations_source_version_id_source_versions FOREIGN KEY",
+      "uq_message_citation_chunk UNIQUE"
+    ],
+    "messages": [
+      "PRIMARY PRIMARY KEY",
+      "ck_messages_valid_moderation CHECK",
+      "ck_messages_valid_sender CHECK",
+      "fk_messages_conversation_id_conversations FOREIGN KEY",
+      "uq_message_sequence UNIQUE"
+    ],
+    "organization_memberships": [
+      "PRIMARY PRIMARY KEY",
+      "ck_organization_memberships_valid_role CHECK",
+      "fk_organization_memberships_organization_id_organizations FOREIGN KEY",
+      "fk_organization_memberships_user_id_users FOREIGN KEY",
+      "uq_org_member UNIQUE"
+    ],
+    "organizations": [
+      "PRIMARY PRIMARY KEY",
+      "ck_organizations_valid_status CHECK",
+      "uq_organizations_slug UNIQUE"
+    ],
+    "password_credentials": [
+      "PRIMARY PRIMARY KEY",
+      "fk_password_credentials_user_id_users FOREIGN KEY"
+    ],
+    "permissions": [
+      "PRIMARY PRIMARY KEY",
+      "uq_permissions_code UNIQUE"
+    ],
+    "pricing_scenario_costs": [
+      "PRIMARY PRIMARY KEY",
+      "ck_pricing_scenario_costs_nonnegative_amount CHECK",
+      "ck_pricing_scenario_costs_positive_allocation CHECK",
+      "fk_pricing_scenario_costs_cost_item_id_cost_items FOREIGN KEY",
+      "fk_pricing_scenario_costs_scenario_id_pricing_scenarios FOREIGN KEY"
+    ],
+    "pricing_scenarios": [
+      "PRIMARY PRIMARY KEY",
+      "assumptions CHECK",
+      "ck_pricing_scenarios_nonnegative_prices CHECK",
+      "ck_pricing_scenarios_positive_units CHECK",
+      "ck_pricing_scenarios_valid_margin CHECK",
+      "fk_pricing_scenarios_business_id_businesses FOREIGN KEY",
+      "fk_pricing_scenarios_created_by_user_id_users FOREIGN KEY"
+    ],
+    "research_participants": [
+      "PRIMARY PRIMARY KEY",
+      "fk_research_participants_research_consent_event_id_user_consents FOREIGN KEY",
+      "uq_research_participants_participant_code UNIQUE"
+    ],
+    "response_feedback": [
+      "PRIMARY PRIMARY KEY",
+      "ck_response_feedback_valid_status CHECK",
+      "ck_response_feedback_valid_type CHECK",
+      "fk_response_feedback_message_id_messages FOREIGN KEY",
+      "fk_response_feedback_user_id_users FOREIGN KEY",
+      "uq_feedback_message_user UNIQUE"
+    ],
+    "role_permissions": [
+      "PRIMARY PRIMARY KEY",
+      "fk_role_permissions_permission_id_permissions FOREIGN KEY",
+      "fk_role_permissions_role_id_roles FOREIGN KEY"
+    ],
+    "roles": [
+      "PRIMARY PRIMARY KEY",
+      "uq_roles_code UNIQUE"
+    ],
+    "security_alerts": [
+      "PRIMARY PRIMARY KEY",
+      "ck_security_alerts_valid_severity CHECK",
+      "ck_security_alerts_valid_status CHECK",
+      "fk_security_alerts_user_id_users FOREIGN KEY"
+    ],
+    "sessions": [
+      "PRIMARY PRIMARY KEY",
+      "fk_sessions_user_id_users FOREIGN KEY",
+      "uq_sessions_refresh_token_hash UNIQUE"
+    ],
+    "skills": [
+      "PRIMARY PRIMARY KEY",
+      "uq_skills_code UNIQUE"
+    ],
+    "source_checks": [
+      "PRIMARY PRIMARY KEY",
+      "fk_source_checks_source_id_sources FOREIGN KEY"
+    ],
+    "source_chunk_embeddings": [
+      "PRIMARY PRIMARY KEY",
+      "fk_source_chunk_embeddings_embedding_model_id_embedding_models FOREIGN KEY",
+      "fk_source_chunk_embeddings_source_chunk_id_source_chunks FOREIGN KEY",
+      "uq_source_chunk_embedding UNIQUE"
+    ],
+    "source_chunks": [
+      "PRIMARY PRIMARY KEY",
+      "ck_source_chunks_positive_number CHECK",
+      "ck_source_chunks_positive_tokens CHECK",
+      "fk_source_chunks_source_version_id_source_versions FOREIGN KEY",
+      "uq_source_chunk_hash UNIQUE",
+      "uq_source_chunk_number UNIQUE"
+    ],
+    "source_publishers": [
+      "PRIMARY PRIMARY KEY",
+      "uq_source_publishers_code UNIQUE"
+    ],
+    "source_status_history": [
+      "PRIMARY PRIMARY KEY",
+      "fk_source_status_history_changed_by_user_id_users FOREIGN KEY",
+      "fk_source_status_history_source_version_id_source_versions FOREIGN KEY"
+    ],
+    "source_versions": [
+      "PRIMARY PRIMARY KEY",
+      "ck_source_versions_valid_dates CHECK",
+      "ck_source_versions_valid_status CHECK",
+      "fk_source_versions_source_id_sources FOREIGN KEY",
+      "uq_source_content_hash UNIQUE"
+    ],
+    "sources": [
+      "PRIMARY PRIMARY KEY",
+      "ck_sources_valid_status CHECK",
+      "fk_sources_publisher_id_source_publishers FOREIGN KEY",
+      "uq_sources_canonical_url UNIQUE"
+    ],
+    "survey_responses": [
+      "PRIMARY PRIMARY KEY",
+      "fk_survey_responses_usability_session_id_usability_sessions FOREIGN KEY",
+      "uq_survey_response UNIQUE"
+    ],
+    "system_settings": [
+      "PRIMARY PRIMARY KEY",
+      "fk_system_settings_updated_by_user_id_users FOREIGN KEY",
+      "value_json CHECK"
+    ],
+    "task_results": [
+      "PRIMARY PRIMARY KEY",
+      "ck_task_results_nonnegative_duration CHECK",
+      "fk_task_results_usability_session_id_usability_sessions FOREIGN KEY",
+      "uq_task_result UNIQUE"
+    ],
+    "usability_sessions": [
+      "PRIMARY PRIMARY KEY",
+      "fk_usability_sessions_participant_id_research_participants FOREIGN KEY"
+    ],
+    "user_consents": [
+      "PRIMARY PRIMARY KEY",
+      "ck_user_consents_valid_decision CHECK",
+      "fk_user_consents_consent_version_id_consent_versions FOREIGN KEY",
+      "fk_user_consents_purpose_id_consent_purposes FOREIGN KEY",
+      "fk_user_consents_user_id_users FOREIGN KEY"
+    ],
+    "user_contacts": [
+      "PRIMARY PRIMARY KEY",
+      "ck_user_contacts_valid_type CHECK",
+      "fk_user_contacts_user_id_users FOREIGN KEY",
+      "uq_contact_type_value UNIQUE"
+    ],
+    "user_preferences": [
+      "PRIMARY PRIMARY KEY",
+      "ck_user_preferences_valid_length CHECK",
+      "ck_user_preferences_valid_tts_speed CHECK",
+      "fk_user_preferences_user_id_users FOREIGN KEY"
+    ],
+    "user_roles": [
+      "PRIMARY PRIMARY KEY",
+      "fk_user_roles_assigned_by_user_id_users FOREIGN KEY",
+      "fk_user_roles_role_id_roles FOREIGN KEY",
+      "fk_user_roles_user_id_users FOREIGN KEY"
+    ],
+    "users": [
+      "PRIMARY PRIMARY KEY",
+      "ck_users_valid_status CHECK"
+    ]
+  },
+  "foreign_keys": {
+    "ai_retrievals": [
+      "fk_ai_retrievals_ai_run_id_ai_runs: ai_run_id -> ai_runs.id",
+      "fk_ai_retrievals_chunk_embedding_id_source_chunk_embeddings: chunk_embedding_id -> source_chunk_embeddings.id"
+    ],
+    "ai_runs": [
+      "fk_ai_runs_assistant_message_id_messages: assistant_message_id -> messages.id"
+    ],
+    "audio_artifacts": [
+      "fk_audio_artifacts_consent_event_id_user_consents: consent_event_id -> user_consents.id",
+      "fk_audio_artifacts_message_id_messages: message_id -> messages.id",
+      "fk_audio_artifacts_user_id_users: user_id -> users.id"
+    ],
+    "auth_challenges": [
+      "fk_auth_challenges_contact_id_user_contacts: contact_id -> user_contacts.id"
+    ],
+    "business_channels": [
+      "fk_business_channels_business_id_businesses: business_id -> businesses.id"
+    ],
+    "business_goals": [
+      "fk_business_goals_business_id_businesses: business_id -> businesses.id"
+    ],
+    "business_memberships": [
+      "fk_business_memberships_business_id_businesses: business_id -> businesses.id",
+      "fk_business_memberships_user_id_users: user_id -> users.id"
+    ],
+    "business_skills": [
+      "fk_business_skills_business_id_businesses: business_id -> businesses.id",
+      "fk_business_skills_skill_id_skills: skill_id -> skills.id"
+    ],
+    "businesses": [
+      "fk_businesses_owner_user_id_users: owner_user_id -> users.id"
+    ],
+    "consent_versions": [
+      "fk_consent_versions_purpose_id_consent_purposes: purpose_id -> consent_purposes.id"
+    ],
+    "conversations": [
+      "fk_conversations_business_id_businesses: business_id -> businesses.id",
+      "fk_conversations_user_id_users: user_id -> users.id"
+    ],
+    "cost_items": [
+      "fk_cost_items_business_id_businesses: business_id -> businesses.id"
+    ],
+    "data_export_requests": [
+      "fk_data_export_requests_user_id_users: user_id -> users.id"
+    ],
+    "deletion_requests": [
+      "fk_deletion_requests_user_id_users: user_id -> users.id"
+    ],
+    "diagnostic_answers": [
+      "fk_diagnostic_answers_session_id_diagnostic_sessions: session_id -> diagnostic_sessions.id"
+    ],
+    "diagnostic_sessions": [
+      "fk_diagnostic_sessions_business_id_businesses: business_id -> businesses.id"
+    ],
+    "escalation_events": [
+      "fk_escalation_events_conversation_id_conversations: conversation_id -> conversations.id",
+      "fk_escalation_events_user_id_users: user_id -> users.id"
+    ],
+    "evaluation_cases": [
+      "fk_evaluation_cases_evaluation_set_id_evaluation_sets: evaluation_set_id -> evaluation_sets.id"
+    ],
+    "evaluation_results": [
+      "fk_evaluation_results_evaluation_case_id_evaluation_cases: evaluation_case_id -> evaluation_cases.id",
+      "fk_evaluation_results_evaluation_run_id_evaluation_runs: evaluation_run_id -> evaluation_runs.id"
+    ],
+    "evaluation_runs": [
+      "fk_evaluation_runs_evaluation_set_id_evaluation_sets: evaluation_set_id -> evaluation_sets.id",
+      "fk_evaluation_runs_executed_by_user_id_users: executed_by_user_id -> users.id"
+    ],
+    "financial_movements": [
+      "fk_financial_movements_business_id_businesses: business_id -> businesses.id",
+      "fk_financial_movements_category_id_financial_categories: category_id -> financial_categories.id",
+      "fk_financial_movements_user_id_users: user_id -> users.id"
+    ],
+    "formalization_routes": [
+      "fk_formalization_routes_business_id_businesses: business_id -> businesses.id",
+      "fk_formalization_routes_generated_by_ai_run_id_ai_runs: generated_by_ai_run_id -> ai_runs.id"
+    ],
+    "formalization_steps": [
+      "fk_formalization_steps_route_id_formalization_routes: route_id -> formalization_routes.id",
+      "fk_formalization_steps_source_version_id_source_versions: source_version_id -> source_versions.id"
+    ],
+    "generated_contents": [
+      "fk_generated_contents_business_id_businesses: business_id -> businesses.id",
+      "fk_generated_contents_source_message_id_messages: source_message_id -> messages.id",
+      "fk_generated_contents_user_id_users: user_id -> users.id"
+    ],
+    "ingestion_jobs": [
+      "fk_ingestion_jobs_source_version_id_source_versions: source_version_id -> source_versions.id"
+    ],
+    "message_citations": [
+      "fk_message_citations_message_id_messages: message_id -> messages.id",
+      "fk_message_citations_source_chunk_id_source_chunks: source_chunk_id -> source_chunks.id",
+      "fk_message_citations_source_version_id_source_versions: source_version_id -> source_versions.id"
+    ],
+    "messages": [
+      "fk_messages_conversation_id_conversations: conversation_id -> conversations.id"
+    ],
+    "organization_memberships": [
+      "fk_organization_memberships_organization_id_organizations: organization_id -> organizations.id",
+      "fk_organization_memberships_user_id_users: user_id -> users.id"
+    ],
+    "password_credentials": [
+      "fk_password_credentials_user_id_users: user_id -> users.id"
+    ],
+    "pricing_scenario_costs": [
+      "fk_pricing_scenario_costs_cost_item_id_cost_items: cost_item_id -> cost_items.id",
+      "fk_pricing_scenario_costs_scenario_id_pricing_scenarios: scenario_id -> pricing_scenarios.id"
+    ],
+    "pricing_scenarios": [
+      "fk_pricing_scenarios_business_id_businesses: business_id -> businesses.id",
+      "fk_pricing_scenarios_created_by_user_id_users: created_by_user_id -> users.id"
+    ],
+    "research_participants": [
+      "fk_research_participants_research_consent_event_id_user_consents: research_consent_event_id -> user_consents.id"
+    ],
+    "response_feedback": [
+      "fk_response_feedback_message_id_messages: message_id -> messages.id",
+      "fk_response_feedback_user_id_users: user_id -> users.id"
+    ],
+    "role_permissions": [
+      "fk_role_permissions_permission_id_permissions: permission_id -> permissions.id",
+      "fk_role_permissions_role_id_roles: role_id -> roles.id"
+    ],
+    "security_alerts": [
+      "fk_security_alerts_user_id_users: user_id -> users.id"
+    ],
+    "sessions": [
+      "fk_sessions_user_id_users: user_id -> users.id"
+    ],
+    "source_checks": [
+      "fk_source_checks_source_id_sources: source_id -> sources.id"
+    ],
+    "source_chunk_embeddings": [
+      "fk_source_chunk_embeddings_embedding_model_id_embedding_models: embedding_model_id -> embedding_models.id",
+      "fk_source_chunk_embeddings_source_chunk_id_source_chunks: source_chunk_id -> source_chunks.id"
+    ],
+    "source_chunks": [
+      "fk_source_chunks_source_version_id_source_versions: source_version_id -> source_versions.id"
+    ],
+    "source_status_history": [
+      "fk_source_status_history_changed_by_user_id_users: changed_by_user_id -> users.id",
+      "fk_source_status_history_source_version_id_source_versions: source_version_id -> source_versions.id"
+    ],
+    "source_versions": [
+      "fk_source_versions_source_id_sources: source_id -> sources.id"
+    ],
+    "sources": [
+      "fk_sources_publisher_id_source_publishers: publisher_id -> source_publishers.id"
+    ],
+    "survey_responses": [
+      "fk_survey_responses_usability_session_id_usability_sessions: usability_session_id -> usability_sessions.id"
+    ],
+    "system_settings": [
+      "fk_system_settings_updated_by_user_id_users: updated_by_user_id -> users.id"
+    ],
+    "task_results": [
+      "fk_task_results_usability_session_id_usability_sessions: usability_session_id -> usability_sessions.id"
+    ],
+    "usability_sessions": [
+      "fk_usability_sessions_participant_id_research_participants: participant_id -> research_participants.id"
+    ],
+    "user_consents": [
+      "fk_user_consents_consent_version_id_consent_versions: consent_version_id -> consent_versions.id",
+      "fk_user_consents_purpose_id_consent_purposes: purpose_id -> consent_purposes.id",
+      "fk_user_consents_user_id_users: user_id -> users.id"
+    ],
+    "user_contacts": [
+      "fk_user_contacts_user_id_users: user_id -> users.id"
+    ],
+    "user_preferences": [
+      "fk_user_preferences_user_id_users: user_id -> users.id"
+    ],
+    "user_roles": [
+      "fk_user_roles_assigned_by_user_id_users: assigned_by_user_id -> users.id",
+      "fk_user_roles_role_id_roles: role_id -> roles.id",
+      "fk_user_roles_user_id_users: user_id -> users.id"
+    ]
+  },
+  "indexes": {
+    "ai_retrievals": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_ai_retrievals_chunk_embedding_id_source_chunk_embeddings (chunk_embedding_id) unique=False type=BTREE",
+      "uq_ai_retrieval_rank (ai_run_id,rank_position) unique=True type=BTREE"
+    ],
+    "ai_runs": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_ai_runs_message (assistant_message_id) unique=False type=BTREE",
+      "ix_ai_runs_trace (trace_id) unique=False type=BTREE",
+      "uq_ai_runs_trace_id (trace_id) unique=True type=BTREE"
+    ],
+    "audio_artifacts": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_audio_artifacts_consent_event_id_user_consents (consent_event_id) unique=False type=BTREE",
+      "fk_audio_artifacts_message_id_messages (message_id) unique=False type=BTREE",
+      "fk_audio_artifacts_user_id_users (user_id) unique=False type=BTREE",
+      "ix_audio_artifacts_purge (purge_at,deleted_at) unique=False type=BTREE"
+    ],
+    "audit_events": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_audit_events_actor_time (actor_user_id,occurred_at) unique=False type=BTREE",
+      "ix_audit_events_correlation (correlation_id) unique=False type=BTREE",
+      "ix_audit_events_object_time (object_type,object_id,occurred_at) unique=False type=BTREE",
+      "uq_audit_events_integrity_hash (integrity_hash) unique=True type=BTREE"
+    ],
+    "auth_challenges": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_auth_challenges_contact_expiry (contact_id,expires_at,consumed_at) unique=False type=BTREE",
+      "uq_auth_challenges_token_hash (token_hash) unique=True type=BTREE"
+    ],
+    "background_jobs": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_background_jobs_queue (status,scheduled_at,job_type) unique=False type=BTREE"
+    ],
+    "business_channels": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_business_channel (business_id,channel_code) unique=True type=BTREE"
+    ],
+    "business_goals": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_business_goals_business_id_businesses (business_id) unique=False type=BTREE"
+    ],
+    "business_memberships": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_business_memberships_user_id_users (user_id) unique=False type=BTREE",
+      "uq_business_member (business_id,user_id) unique=True type=BTREE"
+    ],
+    "business_skills": [
+      "PRIMARY (business_id,skill_id) unique=True type=BTREE",
+      "fk_business_skills_skill_id_skills (skill_id) unique=False type=BTREE"
+    ],
+    "businesses": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_businesses_owner_status (owner_user_id,status,deleted_at) unique=False type=BTREE"
+    ],
+    "consent_purposes": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_consent_purposes_code (code) unique=True type=BTREE"
+    ],
+    "consent_versions": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_consent_versions_purpose_published (purpose_id,published_at) unique=False type=BTREE",
+      "uq_consent_versions_notice_hash (notice_hash) unique=True type=BTREE"
+    ],
+    "conversations": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_conversations_business_id_businesses (business_id) unique=False type=BTREE",
+      "ix_conversations_user_updated (user_id,updated_at,deleted_at) unique=False type=BTREE"
+    ],
+    "cost_items": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_cost_items_business_active (business_id,is_active,deleted_at) unique=False type=BTREE"
+    ],
+    "data_export_requests": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_data_exports_user_status (user_id,status,created_at) unique=False type=BTREE"
+    ],
+    "deletion_requests": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_deletion_requests_user_status (user_id,status,requested_at) unique=False type=BTREE"
+    ],
+    "diagnostic_answers": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_diagnostic_answer (session_id,question_code) unique=True type=BTREE"
+    ],
+    "diagnostic_sessions": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_diagnostics_business_created (business_id,created_at) unique=False type=BTREE"
+    ],
+    "embedding_models": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_embedding_models_code (code) unique=True type=BTREE"
+    ],
+    "escalation_events": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_escalation_events_conversation_id_conversations (conversation_id) unique=False type=BTREE",
+      "ix_escalation_events_user_created (user_id,created_at) unique=False type=BTREE"
+    ],
+    "evaluation_cases": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_evaluation_case (evaluation_set_id,case_code) unique=True type=BTREE"
+    ],
+    "evaluation_results": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_evaluation_results_evaluation_case_id_evaluation_cases (evaluation_case_id) unique=False type=BTREE",
+      "uq_eval_result (evaluation_run_id,evaluation_case_id) unique=True type=BTREE"
+    ],
+    "evaluation_runs": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_evaluation_runs_executed_by_user_id_users (executed_by_user_id) unique=False type=BTREE",
+      "ix_evaluation_runs_set_created (evaluation_set_id,created_at) unique=False type=BTREE"
+    ],
+    "evaluation_sets": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_evaluation_set_version (name,version) unique=True type=BTREE"
+    ],
+    "financial_categories": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_financial_categories_code (code) unique=True type=BTREE"
+    ],
+    "financial_movements": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_financial_movements_category_id_financial_categories (category_id) unique=False type=BTREE",
+      "ix_financial_movements_business_date (business_id,occurred_on,movement_type,deleted_at) unique=False type=BTREE",
+      "ix_financial_movements_user_date (user_id,occurred_on) unique=False type=BTREE"
+    ],
+    "formalization_routes": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_formalization_routes_business_id_businesses (business_id) unique=False type=BTREE",
+      "fk_formalization_routes_generated_by_ai_run_id_ai_runs (generated_by_ai_run_id) unique=False type=BTREE"
+    ],
+    "formalization_steps": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_formalization_steps_source_version_id_source_versions (source_version_id) unique=False type=BTREE",
+      "uq_formalization_step (route_id,step_number) unique=True type=BTREE"
+    ],
+    "generated_contents": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_generated_contents_business_id_businesses (business_id) unique=False type=BTREE",
+      "fk_generated_contents_source_message_id_messages (source_message_id) unique=False type=BTREE",
+      "ix_generated_contents_user_status (user_id,status,created_at) unique=False type=BTREE"
+    ],
+    "ingestion_jobs": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_ingestion_jobs_source_version_id_source_versions (source_version_id) unique=False type=BTREE",
+      "ix_ingestion_jobs_status_created (status,created_at) unique=False type=BTREE"
+    ],
+    "message_citations": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_message_citations_source_chunk_id_source_chunks (source_chunk_id) unique=False type=BTREE",
+      "fk_message_citations_source_version_id_source_versions (source_version_id) unique=False type=BTREE",
+      "ix_message_citations_message (message_id,display_order) unique=False type=BTREE",
+      "uq_message_citation_chunk (message_id,source_chunk_id) unique=True type=BTREE"
+    ],
+    "messages": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_messages_conversation_created (conversation_id,created_at) unique=False type=BTREE",
+      "uq_message_sequence (conversation_id,sequence_number) unique=True type=BTREE"
+    ],
+    "organization_memberships": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_organization_memberships_user_id_users (user_id) unique=False type=BTREE",
+      "uq_org_member (organization_id,user_id) unique=True type=BTREE"
+    ],
+    "organizations": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_organizations_slug (slug) unique=True type=BTREE"
+    ],
+    "password_credentials": [
+      "PRIMARY (user_id) unique=True type=BTREE"
+    ],
+    "permissions": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_permissions_code (code) unique=True type=BTREE"
+    ],
+    "pricing_scenario_costs": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_pricing_scenario_costs_cost_item_id_cost_items (cost_item_id) unique=False type=BTREE",
+      "fk_pricing_scenario_costs_scenario_id_pricing_scenarios (scenario_id) unique=False type=BTREE"
+    ],
+    "pricing_scenarios": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_pricing_scenarios_created_by_user_id_users (created_by_user_id) unique=False type=BTREE",
+      "ix_pricing_scenarios_business_created (business_id,created_at) unique=False type=BTREE"
+    ],
+    "research_participants": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_research_participants_research_consent_event_id_user_consents (research_consent_event_id) unique=False type=BTREE",
+      "uq_research_participants_participant_code (participant_code) unique=True type=BTREE"
+    ],
+    "response_feedback": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_response_feedback_user_id_users (user_id) unique=False type=BTREE",
+      "uq_feedback_message_user (message_id,user_id) unique=True type=BTREE"
+    ],
+    "role_permissions": [
+      "PRIMARY (role_id,permission_id) unique=True type=BTREE",
+      "fk_role_permissions_permission_id_permissions (permission_id) unique=False type=BTREE"
+    ],
+    "roles": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_roles_code (code) unique=True type=BTREE"
+    ],
+    "security_alerts": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_security_alerts_user_id_users (user_id) unique=False type=BTREE",
+      "ix_security_alerts_status_severity (status,severity,created_at) unique=False type=BTREE"
+    ],
+    "sessions": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_sessions_user_expiry (user_id,expires_at,revoked_at) unique=False type=BTREE",
+      "uq_sessions_refresh_token_hash (refresh_token_hash) unique=True type=BTREE"
+    ],
+    "skills": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_skills_code (code) unique=True type=BTREE"
+    ],
+    "source_checks": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_source_checks_source_checked (source_id,checked_at) unique=False type=BTREE"
+    ],
+    "source_chunk_embeddings": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "idx_chunk_embedding (embedding) unique=False type=VECTOR",
+      "ix_chunk_embeddings_model (embedding_model_id) unique=False type=BTREE",
+      "uq_source_chunk_embedding (source_chunk_id) unique=True type=BTREE"
+    ],
+    "source_chunks": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "idx_source_chunks_fulltext (heading,content) unique=False type=FULLTEXT",
+      "ix_source_chunks_version_number (source_version_id,chunk_number) unique=False type=BTREE",
+      "uq_source_chunk_hash (source_version_id,content_hash) unique=True type=BTREE",
+      "uq_source_chunk_number (source_version_id,chunk_number) unique=True type=BTREE"
+    ],
+    "source_publishers": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_source_publishers_code (code) unique=True type=BTREE"
+    ],
+    "source_status_history": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_source_status_history_changed_by_user_id_users (changed_by_user_id) unique=False type=BTREE",
+      "ix_source_status_history_version_date (source_version_id,changed_at) unique=False type=BTREE"
+    ],
+    "source_versions": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_source_versions_validity (source_id,status,valid_from,valid_to) unique=False type=BTREE",
+      "uq_source_content_hash (source_id,content_hash) unique=True type=BTREE"
+    ],
+    "sources": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_sources_publisher_id_source_publishers (publisher_id) unique=False type=BTREE",
+      "ix_sources_status_jurisdiction (status,jurisdiction,topic) unique=False type=BTREE",
+      "uq_sources_canonical_url (canonical_url) unique=True type=HASH"
+    ],
+    "survey_responses": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_survey_response (usability_session_id,question_code) unique=True type=BTREE"
+    ],
+    "system_settings": [
+      "PRIMARY (setting_key) unique=True type=BTREE",
+      "fk_system_settings_updated_by_user_id_users (updated_by_user_id) unique=False type=BTREE"
+    ],
+    "task_results": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "uq_task_result (usability_session_id,task_code) unique=True type=BTREE"
+    ],
+    "usability_sessions": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_usability_sessions_participant_date (participant_id,scheduled_at) unique=False type=BTREE"
+    ],
+    "user_consents": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "fk_user_consents_consent_version_id_consent_versions (consent_version_id) unique=False type=BTREE",
+      "fk_user_consents_purpose_id_consent_purposes (purpose_id) unique=False type=BTREE",
+      "ix_user_consents_user_purpose (user_id,purpose_id,decided_at) unique=False type=BTREE"
+    ],
+    "user_contacts": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_user_contacts_user_primary (user_id,is_primary) unique=False type=BTREE",
+      "uq_contact_type_value (contact_type,value_normalized) unique=True type=BTREE"
+    ],
+    "user_preferences": [
+      "PRIMARY (user_id) unique=True type=BTREE"
+    ],
+    "user_roles": [
+      "PRIMARY (user_id,role_id) unique=True type=BTREE",
+      "fk_user_roles_assigned_by_user_id_users (assigned_by_user_id) unique=False type=BTREE",
+      "fk_user_roles_role_id_roles (role_id) unique=False type=BTREE"
+    ],
+    "users": [
+      "PRIMARY (id) unique=True type=BTREE",
+      "ix_users_status_deleted (status,deleted_at) unique=False type=BTREE"
+    ]
+  },
+  "table_count": 62,
+  "tables": [
+    "ai_retrievals",
+    "ai_runs",
+    "audio_artifacts",
+    "audit_events",
+    "auth_challenges",
+    "background_jobs",
+    "businesses",
+    "business_channels",
+    "business_goals",
+    "business_memberships",
+    "business_skills",
+    "consent_purposes",
+    "consent_versions",
+    "conversations",
+    "cost_items",
+    "data_export_requests",
+    "deletion_requests",
+    "diagnostic_answers",
+    "diagnostic_sessions",
+    "embedding_models",
+    "escalation_events",
+    "evaluation_cases",
+    "evaluation_results",
+    "evaluation_runs",
+    "evaluation_sets",
+    "financial_categories",
+    "financial_movements",
+    "formalization_routes",
+    "formalization_steps",
+    "generated_contents",
+    "ingestion_jobs",
+    "messages",
+    "message_citations",
+    "organizations",
+    "organization_memberships",
+    "password_credentials",
+    "permissions",
+    "pricing_scenarios",
+    "pricing_scenario_costs",
+    "research_participants",
+    "response_feedback",
+    "roles",
+    "role_permissions",
+    "security_alerts",
+    "sessions",
+    "skills",
+    "sources",
+    "source_checks",
+    "source_chunks",
+    "source_chunk_embeddings",
+    "source_publishers",
+    "source_status_history",
+    "source_versions",
+    "survey_responses",
+    "system_settings",
+    "task_results",
+    "usability_sessions",
+    "users",
+    "user_consents",
+    "user_contacts",
+    "user_preferences",
+    "user_roles"
+  ],
+  "triggers": [
+    "trg_audit_events_no_delete BEFORE DELETE ON audit_events",
+    "trg_audit_events_no_update BEFORE UPDATE ON audit_events"
+  ],
+  "views": [
+    "v_monthly_financial_summary"
+  ]
+}

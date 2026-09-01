@@ -1,10 +1,11 @@
 """Tareas periódicas de privacidad y mantenimiento."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy import delete, select
 
 from app.config import get_settings
+from app.core.clock import utc_now
 from app.database import SessionLocal
 from app.models.business import Business, BusinessMembership, UserPreference
 from app.models.conversation import (
@@ -26,10 +27,6 @@ from app.models.identity import (
 from app.models.privacy import DataExportRequest, DeletionRequest, UserConsent
 
 settings = get_settings()
-
-
-def utc_now() -> datetime:
-    return datetime.utcnow()
 
 
 def purge_expired_sessions() -> int:

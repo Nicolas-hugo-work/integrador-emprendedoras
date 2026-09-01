@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
+from app import domain_rules
+
 
 class ContactRegistration(BaseModel):
     contact_type: Literal["EMAIL", "PHONE"]
@@ -75,11 +77,7 @@ class FinancialMovementCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_transfer(self) -> "FinancialMovementCreate":
-        if self.movement_type == "TRANSFER":
-            if self.counter_scope is None or self.counter_scope == self.scope:
-                raise ValueError("Una transferencia requiere ámbitos de origen y destino diferentes")
-        elif self.counter_scope is not None:
-            raise ValueError("counter_scope solo se admite para transferencias")
+        domain_rules.validate_transfer(self.movement_type, self.scope, self.counter_scope)
         return self
 
 
