@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import CHAR, MetaData
@@ -6,6 +6,8 @@ from sqlalchemy.dialects.mysql import DATETIME
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import UserDefinedType
 from uuid6 import uuid7
+
+from app.core.clock import utc_now
 
 NAMING_CONVENTION = {
     "ix": "ix_%(table_name)s_%(column_0_name)s",
@@ -37,10 +39,6 @@ class DateTime6(DATETIME):
 
 def new_uuid7() -> str:
     return str(uuid7())
-
-
-def utc_now() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class UUIDPrimaryKeyMixin:
