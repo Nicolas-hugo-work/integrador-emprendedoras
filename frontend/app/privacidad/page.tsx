@@ -1,52 +1,93 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Database,
   Download,
+  LoaderCircle,
   LockKeyhole,
   Mic,
+  Share2,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
+
 import { AppShell } from '../components/app-shell';
 import { api, clearTokens } from '../lib/api';
+import type { ConsentStatus } from '../types/api';
+
+/** Texto propio para las finalidades conocidas; el resto usa el del backend. */
+const COPY: Record<string, { icon: typeof Mic; description: string }> = {
+  AUDIO: {
+    icon: Mic,
+    description:
+      'Permite transcribir notas de voz. El archivo temporal se elimina tras confirmar la transcripción o dentro de 24 horas.',
+  },
+  RESEARCH: {
+    icon: Database,
+    description:
+      'Autoriza el uso de métricas seudonimizadas del piloto. Nunca incluye tu nombre ni conversaciones completas.',
+  },
+  SECONDARY_USE: {
+    icon: Share2,
+    description:
+      'Autoriza usos adicionales descritos por separado. Puedes retirarlo en cualquier momento.',
+  },
+};
+
+function describe(reason: unknown, fallback: string): string {
+  return reason instanceof Error ? reason.message : fallback;
+}
 
 export default function PrivacyPage() {
-  const [audio, setAudio] = useState(false);
-  const [research, setResearch] = useState(false);
+  const [consents, setConsents] = useState<ConsentStatus[]>([]);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  async function consent(code: 'AUDIO' | 'RESEARCH', granted: boolean) {
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const listed = await api<ConsentStatus[]>('/consents');
+        if (alive) setConsents(listed);
+      } catch (reason) {
+        if (alive)
+          setError(describe(reason, 'No se pudieron cargar tus preferencias.'));
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function decide(consent: ConsentStatus, granted: boolean) {
     setError('');
+    setMessage('');
     try {
       await api('/consents', {
         method: 'POST',
         body: JSON.stringify({
-          purpose_code: code,
-          version: '1.0',
+          purpose_code: consent.purpose_code,
+          version: consent.version ?? '1.0',
           decision: granted ? 'GRANTED' : 'WITHDRAWN',
         }),
       });
+      // Se relee del servidor: lo que se muestra es lo que quedó guardado.
+      setConsents(await api<ConsentStatus[]>('/consents'));
       setMessage('Tu preferencia quedó guardada.');
-      if (code === 'AUDIO') {
-        setAudio(granted);
-      } else {
-        setResearch(granted);
-      }
     } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : 'No se pudo guardar.',
-      );
+      setError(describe(reason, 'No se pudo guardar.'));
     }
   }
+
   async function deleteAccount() {
-    if (
-      !confirm(
-        'Tu cuenta se desactivará ahora y sus datos se purgarán en un máximo de 30 días. ¿Continuar?',
-      )
-    )
-      return;
+    const confirmed = confirm(
+      'Tu cuenta se desactivará ahora y sus datos se purgarán en un máximo de 30 días. ¿Continuar?',
+    );
+    if (!confirmed) return;
     try {
       await api('/privacy/deletion', {
         method: 'POST',
@@ -55,22 +96,23 @@ export default function PrivacyPage() {
       clearTokens();
       window.location.href = '/login';
     } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : 'No se pudo solicitar.',
-      );
+      setError(describe(reason, 'No se pudo solicitar.'));
     }
   }
+
   async function requestExport() {
     setError('');
+    setMessage('');
     try {
       await api('/privacy/export', { method: 'POST' });
       setMessage('Solicitud recibida. Prepararemos una copia en formato JSON.');
     } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : 'No se pudo solicitar.',
-      );
+      setError(describe(reason, 'No se pudo solicitar.'));
     }
   }
+
+  const optional = consents.filter((consent) => !consent.is_required);
+
   return (
     <AppShell
       eyebrow="Tus datos, tus decisiones"
@@ -94,55 +136,55 @@ export default function PrivacyPage() {
               </div>
             </div>
           </div>
-          {[
-            {
-              title: 'Uso temporal de audio',
-              description:
-                'Permite transcribir notas de voz. El archivo temporal se elimina tras confirmar la transcripción o dentro de 24 horas.',
-              value: audio,
-              icon: Mic,
-              action: (v: boolean) => consent('AUDIO', v),
-            },
-            {
-              title: 'Participación en investigación',
-              description:
-                'Autoriza el uso de métricas seudonimizadas del piloto. Nunca incluye tu nombre ni conversaciones completas.',
-              value: research,
-              icon: Database,
-              action: (v: boolean) => consent('RESEARCH', v),
-            },
-          ].map(({ title, description, value, icon: Icon, action }) => (
-            <article
-              key={title}
-              className="flex gap-4 rounded-3xl border bg-card p-6"
-            >
-              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
-                <Icon className="size-5" />
-              </span>
-              <div className="flex-1">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="max-w-xl">
-                    <h3 className="font-bold">{title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {description}
-                    </p>
+
+          {loading ? (
+            <div className="grid min-h-40 place-items-center rounded-3xl border bg-card">
+              <LoaderCircle className="animate-spin text-primary" />
+            </div>
+          ) : (
+            optional.map((consent) => {
+              const copy = COPY[consent.purpose_code];
+              const Icon = copy?.icon ?? ShieldCheck;
+              return (
+                <article
+                  key={consent.purpose_code}
+                  className="flex gap-4 rounded-3xl border bg-card p-6"
+                >
+                  <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary">
+                    <Icon className="size-5" />
+                  </span>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="max-w-xl">
+                        <h3 className="font-bold">{consent.name}</h3>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {copy?.description ?? consent.withdrawal_effect}
+                        </p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {consent.decision === null
+                            ? 'Todavía no has decidido sobre esta finalidad.'
+                            : `Al retirarlo: ${consent.withdrawal_effect.toLowerCase()}`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => decide(consent, !consent.allowed)}
+                        role="switch"
+                        aria-checked={consent.allowed}
+                        aria-label={consent.name}
+                        className={`relative h-7 w-12 shrink-0 rounded-full transition ${consent.allowed ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                      >
+                        <span
+                          className={`absolute top-1 size-5 rounded-full bg-white transition ${consent.allowed ? 'left-6' : 'left-1'}`}
+                        />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => action(!value)}
-                    type="button"
-                    role="switch"
-                    aria-checked={value}
-                    aria-label={title}
-                    className={`relative h-7 w-12 rounded-full transition ${value ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-                  >
-                    <span
-                      className={`absolute top-1 size-5 rounded-full bg-white transition ${value ? 'left-6' : 'left-1'}`}
-                    />
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
+                </article>
+              );
+            })
+          )}
+
           {message && (
             <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">
               {message}
@@ -153,6 +195,7 @@ export default function PrivacyPage() {
               {error}
             </p>
           )}
+
           <div className="rounded-3xl border border-red-200 bg-card p-6">
             <div className="flex items-start gap-4">
               <Trash2 className="mt-1 size-5 text-red-700" />
@@ -163,6 +206,7 @@ export default function PrivacyPage() {
                   dentro de 30 días.
                 </p>
                 <button
+                  type="button"
                   onClick={deleteAccount}
                   className="mt-4 rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
                 >
@@ -172,6 +216,7 @@ export default function PrivacyPage() {
             </div>
           </div>
         </section>
+
         <aside className="space-y-4">
           <div className="rounded-3xl bg-primary p-6 text-white">
             <LockKeyhole className="size-7" />
@@ -186,6 +231,7 @@ export default function PrivacyPage() {
             </ul>
           </div>
           <button
+            type="button"
             onClick={requestExport}
             className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left text-sm font-bold"
           >

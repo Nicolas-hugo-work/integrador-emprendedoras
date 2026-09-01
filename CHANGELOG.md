@@ -6,6 +6,56 @@ Este proyecto utiliza [versionado semántico](https://semver.org/lang/es/):
 - `MINOR` (`0.2.0`): nuevas funciones compatibles.
 - `MAJOR` (`1.0.0`): versión estable o cambios incompatibles.
 
+## [0.3.0] - 2026-09-01
+
+Cierra tres promesas que la aplicacion no cumplia: no se podia corregir un
+error, la curaduria de fuentes no era alcanzable desde el producto, y la
+pantalla de privacidad mostraba un estado que no era el guardado. La API pasa
+de 26 a 39 operaciones, todas aditivas: ninguna operacion previa cambio.
+
+### Se puede corregir
+
+- `PATCH` y `DELETE` sobre movimientos, costos y emprendimientos. Hasta ahora
+  la API tenia 19 `POST`, 7 `GET` y ningun verbo de mutacion, asi que un monto
+  mal tipeado era permanente.
+- `GET /finance/costs`, para poder ver los costos y corregirlos.
+- Borrar un emprendimiento no borra su historial financiero, y borrar un costo
+  no altera escenarios de precio ya calculados.
+
+### Curaduria alcanzable
+
+- `GET /source-publishers`, `GET /sources`, `GET /sources/{id}/versions` y
+  `GET /source-versions/{id}/chunks`.
+- `POST /source-versions/{id}/retire`: la contraparte que faltaba de publicar.
+  Sacar de circulacion una norma desactualizada exigia un `UPDATE` manual.
+- Publicar y retirar quedan registrados en `source_status_history`, con quien
+  hizo el cambio y por que. La tabla existia sin usarse desde el esquema
+  inicial.
+- Pantalla `/curaduria`, visible solo con el permiso `source.review`.
+
+### Privacidad honesta
+
+- `GET /consents` devuelve la decision vigente por finalidad, junto con lo que
+  implica retirarla. La pantalla deja de mantener el estado solo en el cliente:
+  al recargar ya muestra lo que quedo guardado.
+
+### Autorizacion
+
+- `/me` devuelve `roles` y `permissions`, de modo que la interfaz se condiciona
+  por capacidad con los mismos codigos que verifica el backend.
+- Nuevo inventario de autorizacion: cada operacion debe declararse como
+  publica, autenticada o exigente de un permiso, y una ruta sin clasificar hace
+  fallar la bateria. En v0.1.0 se sembraron 10 permisos y solo 2 llegaban a
+  verificarse.
+- La comprobacion de contrato pasa de exigir identidad a exigir compatibilidad
+  hacia atras: las operaciones previas no pueden cambiar y las nuevas deben
+  declararse.
+
+### Sin cambios de esquema
+
+Las 62 tablas, indices, vista y triggers son identicos a los de `0.1.0`. Toda
+la funcionalidad se apoya en columnas que ya existian.
+
 ## [0.2.0] - 2026-09-01
 
 Refactor estructural del backend, endurecimiento de la autenticación y

@@ -95,6 +95,18 @@ export type AssistantAnswer = {
 
 export type ConsentPurpose = 'ACCOUNT' | 'AUDIO' | 'RESEARCH' | 'SECONDARY_USE';
 
+export type ConsentStatus = {
+  purpose_code: ConsentPurpose;
+  name: string;
+  is_required: boolean;
+  withdrawal_effect: string;
+  /** `null` mientras la usuaria no haya decidido nunca sobre esta finalidad. */
+  decision: 'GRANTED' | 'WITHDRAWN' | null;
+  version: string | null;
+  decided_at: string | null;
+  allowed: boolean;
+};
+
 export type Publisher = {
   id: string;
   code: string;

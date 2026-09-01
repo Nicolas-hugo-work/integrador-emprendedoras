@@ -230,6 +230,22 @@ class ConsentDecision(BaseModel):
     decision: Literal["GRANTED", "WITHDRAWN"]
 
 
+class ConsentStatusView(BaseModel):
+    """Estado vigente de una finalidad para la usuaria."""
+
+    purpose_code: str
+    name: str
+    is_required: bool
+    #: Qué ocurre si se retira; el texto lo define la migración.
+    withdrawal_effect: str
+    #: `None` mientras la usuaria no haya decidido nunca sobre esta finalidad.
+    decision: Literal["GRANTED", "WITHDRAWN"] | None
+    version: str | None
+    decided_at: datetime | None
+    #: `domain_rules.optional_feature_allowed` aplicado a la decisión vigente.
+    allowed: bool
+
+
 class FeedbackCreate(BaseModel):
     message_id: str
     feedback_type: Literal["USEFUL", "ERROR", "OUTDATED_SOURCE"]

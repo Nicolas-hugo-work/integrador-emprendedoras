@@ -733,10 +733,7 @@
       "ck_businesses_valid_status CHECK",
       "fk_businesses_owner_user_id_users FOREIGN KEY"
     ],
-    "consent_purposes": [
-      "PRIMARY PRIMARY KEY",
-      "uq_consent_purposes_code UNIQUE"
-    ],
+    "consent_purposes": ["PRIMARY PRIMARY KEY", "uq_consent_purposes_code UNIQUE"],
     "consent_versions": [
       "PRIMARY PRIMARY KEY",
       "fk_consent_versions_purpose_id_consent_purposes FOREIGN KEY",
@@ -806,10 +803,7 @@
       "fk_evaluation_runs_evaluation_set_id_evaluation_sets FOREIGN KEY",
       "fk_evaluation_runs_executed_by_user_id_users FOREIGN KEY"
     ],
-    "evaluation_sets": [
-      "PRIMARY PRIMARY KEY",
-      "uq_evaluation_set_version UNIQUE"
-    ],
+    "evaluation_sets": ["PRIMARY PRIMARY KEY", "uq_evaluation_set_version UNIQUE"],
     "financial_categories": [
       "PRIMARY PRIMARY KEY",
       "ck_financial_categories_valid_type CHECK",
@@ -882,10 +876,7 @@
       "PRIMARY PRIMARY KEY",
       "fk_password_credentials_user_id_users FOREIGN KEY"
     ],
-    "permissions": [
-      "PRIMARY PRIMARY KEY",
-      "uq_permissions_code UNIQUE"
-    ],
+    "permissions": ["PRIMARY PRIMARY KEY", "uq_permissions_code UNIQUE"],
     "pricing_scenario_costs": [
       "PRIMARY PRIMARY KEY",
       "ck_pricing_scenario_costs_nonnegative_amount CHECK",
@@ -920,10 +911,7 @@
       "fk_role_permissions_permission_id_permissions FOREIGN KEY",
       "fk_role_permissions_role_id_roles FOREIGN KEY"
     ],
-    "roles": [
-      "PRIMARY PRIMARY KEY",
-      "uq_roles_code UNIQUE"
-    ],
+    "roles": ["PRIMARY PRIMARY KEY", "uq_roles_code UNIQUE"],
     "security_alerts": [
       "PRIMARY PRIMARY KEY",
       "ck_security_alerts_valid_severity CHECK",
@@ -935,14 +923,8 @@
       "fk_sessions_user_id_users FOREIGN KEY",
       "uq_sessions_refresh_token_hash UNIQUE"
     ],
-    "skills": [
-      "PRIMARY PRIMARY KEY",
-      "uq_skills_code UNIQUE"
-    ],
-    "source_checks": [
-      "PRIMARY PRIMARY KEY",
-      "fk_source_checks_source_id_sources FOREIGN KEY"
-    ],
+    "skills": ["PRIMARY PRIMARY KEY", "uq_skills_code UNIQUE"],
+    "source_checks": ["PRIMARY PRIMARY KEY", "fk_source_checks_source_id_sources FOREIGN KEY"],
     "source_chunk_embeddings": [
       "PRIMARY PRIMARY KEY",
       "fk_source_chunk_embeddings_embedding_model_id_embedding_models FOREIGN KEY",
@@ -957,10 +939,7 @@
       "uq_source_chunk_hash UNIQUE",
       "uq_source_chunk_number UNIQUE"
     ],
-    "source_publishers": [
-      "PRIMARY PRIMARY KEY",
-      "uq_source_publishers_code UNIQUE"
-    ],
+    "source_publishers": ["PRIMARY PRIMARY KEY", "uq_source_publishers_code UNIQUE"],
     "source_status_history": [
       "PRIMARY PRIMARY KEY",
       "fk_source_status_history_changed_by_user_id_users FOREIGN KEY",
@@ -1024,19 +1003,14 @@
       "fk_user_roles_role_id_roles FOREIGN KEY",
       "fk_user_roles_user_id_users FOREIGN KEY"
     ],
-    "users": [
-      "PRIMARY PRIMARY KEY",
-      "ck_users_valid_status CHECK"
-    ]
+    "users": ["PRIMARY PRIMARY KEY", "ck_users_valid_status CHECK"]
   },
   "foreign_keys": {
     "ai_retrievals": [
       "fk_ai_retrievals_ai_run_id_ai_runs: ai_run_id -> ai_runs.id",
       "fk_ai_retrievals_chunk_embedding_id_source_chunk_embeddings: chunk_embedding_id -> source_chunk_embeddings.id"
     ],
-    "ai_runs": [
-      "fk_ai_runs_assistant_message_id_messages: assistant_message_id -> messages.id"
-    ],
+    "ai_runs": ["fk_ai_runs_assistant_message_id_messages: assistant_message_id -> messages.id"],
     "audio_artifacts": [
       "fk_audio_artifacts_consent_event_id_user_consents: consent_event_id -> user_consents.id",
       "fk_audio_artifacts_message_id_messages: message_id -> messages.id",
@@ -1048,9 +1022,7 @@
     "business_channels": [
       "fk_business_channels_business_id_businesses: business_id -> businesses.id"
     ],
-    "business_goals": [
-      "fk_business_goals_business_id_businesses: business_id -> businesses.id"
-    ],
+    "business_goals": ["fk_business_goals_business_id_businesses: business_id -> businesses.id"],
     "business_memberships": [
       "fk_business_memberships_business_id_businesses: business_id -> businesses.id",
       "fk_business_memberships_user_id_users: user_id -> users.id"
@@ -1059,9 +1031,7 @@
       "fk_business_skills_business_id_businesses: business_id -> businesses.id",
       "fk_business_skills_skill_id_skills: skill_id -> skills.id"
     ],
-    "businesses": [
-      "fk_businesses_owner_user_id_users: owner_user_id -> users.id"
-    ],
+    "businesses": ["fk_businesses_owner_user_id_users: owner_user_id -> users.id"],
     "consent_versions": [
       "fk_consent_versions_purpose_id_consent_purposes: purpose_id -> consent_purposes.id"
     ],
@@ -1069,15 +1039,9 @@
       "fk_conversations_business_id_businesses: business_id -> businesses.id",
       "fk_conversations_user_id_users: user_id -> users.id"
     ],
-    "cost_items": [
-      "fk_cost_items_business_id_businesses: business_id -> businesses.id"
-    ],
-    "data_export_requests": [
-      "fk_data_export_requests_user_id_users: user_id -> users.id"
-    ],
-    "deletion_requests": [
-      "fk_deletion_requests_user_id_users: user_id -> users.id"
-    ],
+    "cost_items": ["fk_cost_items_business_id_businesses: business_id -> businesses.id"],
+    "data_export_requests": ["fk_data_export_requests_user_id_users: user_id -> users.id"],
+    "deletion_requests": ["fk_deletion_requests_user_id_users: user_id -> users.id"],
     "diagnostic_answers": [
       "fk_diagnostic_answers_session_id_diagnostic_sessions: session_id -> diagnostic_sessions.id"
     ],
@@ -1125,16 +1089,12 @@
       "fk_message_citations_source_chunk_id_source_chunks: source_chunk_id -> source_chunks.id",
       "fk_message_citations_source_version_id_source_versions: source_version_id -> source_versions.id"
     ],
-    "messages": [
-      "fk_messages_conversation_id_conversations: conversation_id -> conversations.id"
-    ],
+    "messages": ["fk_messages_conversation_id_conversations: conversation_id -> conversations.id"],
     "organization_memberships": [
       "fk_organization_memberships_organization_id_organizations: organization_id -> organizations.id",
       "fk_organization_memberships_user_id_users: user_id -> users.id"
     ],
-    "password_credentials": [
-      "fk_password_credentials_user_id_users: user_id -> users.id"
-    ],
+    "password_credentials": ["fk_password_credentials_user_id_users: user_id -> users.id"],
     "pricing_scenario_costs": [
       "fk_pricing_scenario_costs_cost_item_id_cost_items: cost_item_id -> cost_items.id",
       "fk_pricing_scenario_costs_scenario_id_pricing_scenarios: scenario_id -> pricing_scenarios.id"
@@ -1154,15 +1114,9 @@
       "fk_role_permissions_permission_id_permissions: permission_id -> permissions.id",
       "fk_role_permissions_role_id_roles: role_id -> roles.id"
     ],
-    "security_alerts": [
-      "fk_security_alerts_user_id_users: user_id -> users.id"
-    ],
-    "sessions": [
-      "fk_sessions_user_id_users: user_id -> users.id"
-    ],
-    "source_checks": [
-      "fk_source_checks_source_id_sources: source_id -> sources.id"
-    ],
+    "security_alerts": ["fk_security_alerts_user_id_users: user_id -> users.id"],
+    "sessions": ["fk_sessions_user_id_users: user_id -> users.id"],
+    "source_checks": ["fk_source_checks_source_id_sources: source_id -> sources.id"],
     "source_chunk_embeddings": [
       "fk_source_chunk_embeddings_embedding_model_id_embedding_models: embedding_model_id -> embedding_models.id",
       "fk_source_chunk_embeddings_source_chunk_id_source_chunks: source_chunk_id -> source_chunks.id"
@@ -1174,12 +1128,8 @@
       "fk_source_status_history_changed_by_user_id_users: changed_by_user_id -> users.id",
       "fk_source_status_history_source_version_id_source_versions: source_version_id -> source_versions.id"
     ],
-    "source_versions": [
-      "fk_source_versions_source_id_sources: source_id -> sources.id"
-    ],
-    "sources": [
-      "fk_sources_publisher_id_source_publishers: publisher_id -> source_publishers.id"
-    ],
+    "source_versions": ["fk_source_versions_source_id_sources: source_id -> sources.id"],
+    "sources": ["fk_sources_publisher_id_source_publishers: publisher_id -> source_publishers.id"],
     "survey_responses": [
       "fk_survey_responses_usability_session_id_usability_sessions: usability_session_id -> usability_sessions.id"
     ],
@@ -1197,12 +1147,8 @@
       "fk_user_consents_purpose_id_consent_purposes: purpose_id -> consent_purposes.id",
       "fk_user_consents_user_id_users: user_id -> users.id"
     ],
-    "user_contacts": [
-      "fk_user_contacts_user_id_users: user_id -> users.id"
-    ],
-    "user_preferences": [
-      "fk_user_preferences_user_id_users: user_id -> users.id"
-    ],
+    "user_contacts": ["fk_user_contacts_user_id_users: user_id -> users.id"],
+    "user_preferences": ["fk_user_preferences_user_id_users: user_id -> users.id"],
     "user_roles": [
       "fk_user_roles_assigned_by_user_id_users: assigned_by_user_id -> users.id",
       "fk_user_roles_role_id_roles: role_id -> roles.id",
@@ -1378,9 +1324,7 @@
       "PRIMARY (id) unique=True type=BTREE",
       "uq_organizations_slug (slug) unique=True type=BTREE"
     ],
-    "password_credentials": [
-      "PRIMARY (user_id) unique=True type=BTREE"
-    ],
+    "password_credentials": ["PRIMARY (user_id) unique=True type=BTREE"],
     "permissions": [
       "PRIMARY (id) unique=True type=BTREE",
       "uq_permissions_code (code) unique=True type=BTREE"
@@ -1409,10 +1353,7 @@
       "PRIMARY (role_id,permission_id) unique=True type=BTREE",
       "fk_role_permissions_permission_id_permissions (permission_id) unique=False type=BTREE"
     ],
-    "roles": [
-      "PRIMARY (id) unique=True type=BTREE",
-      "uq_roles_code (code) unique=True type=BTREE"
-    ],
+    "roles": ["PRIMARY (id) unique=True type=BTREE", "uq_roles_code (code) unique=True type=BTREE"],
     "security_alerts": [
       "PRIMARY (id) unique=True type=BTREE",
       "fk_security_alerts_user_id_users (user_id) unique=False type=BTREE",
@@ -1491,9 +1432,7 @@
       "ix_user_contacts_user_primary (user_id,is_primary) unique=False type=BTREE",
       "uq_contact_type_value (contact_type,value_normalized) unique=True type=BTREE"
     ],
-    "user_preferences": [
-      "PRIMARY (user_id) unique=True type=BTREE"
-    ],
+    "user_preferences": ["PRIMARY (user_id) unique=True type=BTREE"],
     "user_roles": [
       "PRIMARY (user_id,role_id) unique=True type=BTREE",
       "fk_user_roles_assigned_by_user_id_users (assigned_by_user_id) unique=False type=BTREE",
@@ -1573,7 +1512,5 @@
     "trg_audit_events_no_delete BEFORE DELETE ON audit_events",
     "trg_audit_events_no_update BEFORE UPDATE ON audit_events"
   ],
-  "views": [
-    "v_monthly_financial_summary"
-  ]
+  "views": ["v_monthly_financial_summary"]
 }
