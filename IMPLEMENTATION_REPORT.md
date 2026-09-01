@@ -116,6 +116,10 @@ Total: 71 archivos, +12 400 / −1 566.
 | `npm run test` (Vitest) | 10 pasan |
 | `npm run build` | 8 rutas generadas |
 | `docker compose up --build` desde cero | 62 tablas, `/health`, registro, verificación y login correctos; frontend HTTP 200 |
+| **CI en GitHub Actions** ([run 33478028330](https://github.com/Nicolas-hugo-work/integrador-emprendedoras/actions/runs/33478028330)) | **los tres trabajos pasan**: backend 44 s, frontend 29 s, Docker 1 m 35 s |
+
+El CI ejecutó las 105 pruebas sobre Python 3.12 y MariaDB 11.8 sin ninguna
+omitida; la compuerta que falla ante pruebas saltadas no se activó.
 
 La prueba de Docker se ejecutó en un proyecto Compose **aislado**
 (`-p kawsay-smoke`) con volumen propio, y se desmontó con `down -v`. El volumen
@@ -153,6 +157,12 @@ quedó restaurada.
 | `bd9e80f` | `fix(backend): endurece autenticacion, secretos y reglas duplicadas` |
 | `151ceca` | `refactor(frontend): renovacion de sesion, tipos compartidos y lint real` |
 | `5651207` | `chore(release): version 0.2.0` |
+| `bcfb890` | `docs: informe de implementacion de v0.2.0` |
+| `94d6ce5` | `fix(ci): crea la base de migracion sin depender del cliente mariadb` |
+
+El último corrige el único fallo de la primera ejecución de CI: el runner de
+GitHub no trae ningún cliente de MySQL, así que la base del ciclo de migración
+ahora se crea con PyMySQL. Tras ese arreglo los tres trabajos pasan.
 
 ---
 
@@ -195,26 +205,23 @@ quedó restaurada.
 
 ## 7. Limitaciones y asuntos pendientes
 
-1. **CI sin ejecutar todavía en GitHub.** El workflow se creó y el PR está
-   abierto, pero su primera ejecución depende del runner. Todas las
-   comprobaciones se ejecutaron localmente con los mismos comandos.
-2. **Límite de intentos no distribuido.** Con varias réplicas de backend cada
+1. **Límite de intentos no distribuido.** Con varias réplicas de backend cada
    proceso llevaría su propio contador.
-3. **Los commits intermedios no se validaron por separado.** Las fases A y B son
+2. **Los commits intermedios no se validaron por separado.** Las fases A y B son
    una división lógica de un refactor atómico: el estado final está verificado
    por completo, pero `af01805` por sí solo no pasaría la batería.
-4. **`audio_purge_deadline` y `optional_feature_allowed`** quedan documentadas y
+3. **`audio_purge_deadline` y `optional_feature_allowed`** quedan documentadas y
    probadas pero sin punto de uso: no existe carga de audio ni `GET /consents`,
    y añadir esos endpoints habría excedido la superficie HTTP aprobada.
-5. **Esquema vectorial dormido.** `source_chunk_embeddings`, `VECTOR(768)` e
+4. **Esquema vectorial dormido.** `source_chunk_embeddings`, `VECTOR(768)` e
    `idx_chunk_embedding` existen pero nada los escribe ni lee. La recuperación
    RAG sigue congelada en coincidencias `LIKE`, según lo acordado.
-6. **Recuperación RAG no determinista** cuando la consulta tiene más de ocho
+5. **Recuperación RAG no determinista** cuando la consulta tiene más de ocho
    términos: `list(set(...))[:8]` depende del orden de iteración del conjunto.
    Es comportamiento heredado de `v0.1.0` y se conservó por el congelamiento;
    conviene corregirlo en v0.3.0.
-7. **`docker-compose.yml` sigue con secretos literales** para desarrollo local.
+6. **`docker-compose.yml` sigue con secretos literales** para desarrollo local.
    Es coherente con `APP_ENV=development`, y el nuevo guardián impide que esa
    configuración llegue a otro entorno.
-8. **Etiqueta `v0.2.0` no creada.** El plan la condiciona a la aprobación del
+7. **Etiqueta `v0.2.0` no creada.** El plan la condiciona a la aprobación del
    PR, que sigue abierto.
