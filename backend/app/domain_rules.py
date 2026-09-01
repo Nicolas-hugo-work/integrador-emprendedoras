@@ -5,11 +5,17 @@ MONEY = Decimal("0.01")
 
 
 def validate_transfer(movement_type: str, scope: str, counter_scope: str | None) -> None:
+    """Única definición de la coherencia de una transferencia.
+
+    `FinancialMovementCreate` delega aquí, de modo que la regla se aplica en el
+    borde HTTP —Pydantic convierte el `ValueError` en un 422— sin quedar
+    duplicada. Los textos son los que la API ya devolvía en v0.1.0.
+    """
     if movement_type == "TRANSFER":
         if counter_scope is None or counter_scope == scope:
-            raise ValueError("La transferencia requiere origen y destino diferentes")
+            raise ValueError("Una transferencia requiere ámbitos de origen y destino diferentes")
     elif counter_scope is not None:
-        raise ValueError("counter_scope solo corresponde a transferencias")
+        raise ValueError("counter_scope solo se admite para transferencias")
 
 
 def movement_balance_effect(movement_type: str, amount: Decimal) -> Decimal:
@@ -52,6 +58,13 @@ def validate_normative_response(
 
 
 def audio_purge_deadline(uploaded_at: datetime, confirmed_at: datetime | None) -> datetime:
+    """Plazo de purga de un audio: al confirmar la transcripción o a las 24 horas.
+
+    Todavía no la invoca ningún caso de uso porque no existe un endpoint de
+    carga de audio: `tasks.purge_audio_metadata` lee `AudioArtifact.purge_at`,
+    pero nada crea esas filas. Queda como contrato listo para v0.3.0, cuando se
+    añada la carga de notas de voz; su comportamiento está fijado por pruebas.
+    """
     hard_limit = uploaded_at + timedelta(hours=24)
     return min(hard_limit, confirmed_at) if confirmed_at else hard_limit
 
@@ -61,5 +74,13 @@ def account_purge_deadline(requested_at: datetime) -> datetime:
 
 
 def optional_feature_allowed(latest_decision: str | None) -> bool:
+    """Indica si una finalidad opcional está vigente para la usuaria.
+
+    Tampoco tiene todavía punto de uso: la API no expone una lectura de
+    consentimientos (`GET /consents`), así que la pantalla de privacidad
+    mantiene el estado en el cliente. Añadir ese endpoint cambiaría la
+    superficie HTTP más allá de lo aprobado para v0.2.0, de modo que la regla
+    queda documentada y probada a la espera de v0.3.0.
+    """
     return latest_decision == "GRANTED"
 

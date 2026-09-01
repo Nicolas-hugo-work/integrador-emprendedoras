@@ -1,7 +1,16 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+#: Valores de marcador que trae el repositorio. Sirven para arrancar en local,
+#: nunca para un despliegue real.
+PLACEHOLDER_SECRETS = {
+    "content_encryption_key": "replace-with-a-fernet-key",
+    "jwt_secret": "replace-with-at-least-32-random-characters",
+}
+
+MINIMUM_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -28,6 +37,33 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def reject_placeholder_secrets(self) -> "Settings":
+        """Impide arrancar fuera de desarrollo con los secretos de ejemplo.
+
+        `v0.1.0` aceptaba en cualquier entorno los valores `replace-with-...`
+        del repositorio, de modo que un despliegue descuidado quedaba con una
+        clave de firma y una de cifrado públicas.
+        """
+        if self.app_env == "development":
+            return self
+        problems = []
+        for name, placeholder in PLACEHOLDER_SECRETS.items():
+            value = getattr(self, name)
+            if value == placeholder:
+                problems.append(f"{name.upper()} conserva el valor de ejemplo del repositorio")
+            elif len(value) < MINIMUM_SECRET_LENGTH:
+                problems.append(
+                    f"{name.upper()} debe tener al menos {MINIMUM_SECRET_LENGTH} caracteres"
+                )
+        if problems:
+            raise ValueError(
+                "Configuración insegura para APP_ENV="
+                f"{self.app_env}: " + "; ".join(problems) + ". "
+                "Defina secretos propios antes de desplegar (vea .env.example)."
+            )
+        return self
 
 
 @lru_cache
