@@ -139,12 +139,15 @@ def test_normative_answer_carries_a_warning_and_citations(client, account, publi
     assert len(body["citations"]) >= 1, "una respuesta normativa nunca va sin cita"
 
 
-def test_retired_versions_stop_being_retrieved(client, account, publish_source) -> None:
-    from sqlalchemy import select
+def test_retired_versions_stop_being_retrieved(
+    client, account, curator, publish_source
+) -> None:
+    """Retirar una fuente por endpoint la saca de circulación.
 
-    from app.database import SessionLocal
-    from app.models.rag import SourceVersion
-
+    Hasta v0.2.0 esta prueba cambiaba el estado con SQL directo porque no
+    existía endpoint de retiro: verificaba la propiedad de seguridad por un
+    camino que la curadora no tenía.
+    """
     term = _unique_term()
     published = publish_source(f"Una {term} debe renovar su registro cada gestión.")
 
@@ -153,16 +156,106 @@ def test_retired_versions_stop_being_retrieved(client, account, publish_source) 
     )
     assert found.json()["abstained"] is False
 
-    with SessionLocal() as db:
-        version = db.scalar(select(SourceVersion).where(SourceVersion.id == published["version_id"]))
-        version.status = "RETIRED"
-        db.commit()
+    retired = client.post(
+        f"/source-versions/{published['version_id']}/retire",
+        headers=curator.headers,
+        json={"reason": "La norma fue derogada en 2026"},
+    )
+    assert retired.status_code == 200, retired.text
+    assert retired.json()["status"] == "RETIRED"
 
     after = client.post(
         "/assistant/query", headers=account.headers, json={"message": f"sobre la {term}"}
     )
     assert after.json()["abstained"] is True, "una versión retirada no puede citarse"
     assert after.json()["citations"] == []
+
+
+def test_retiring_twice_is_rejected(client, curator, publish_source) -> None:
+    published = publish_source(f"Contenido sobre {_unique_term()} para retirar dos veces.")
+    body = {"reason": "Quedó desactualizada"}
+    first = client.post(
+        f"/source-versions/{published['version_id']}/retire", headers=curator.headers, json=body
+    )
+    assert first.status_code == 200
+    second = client.post(
+        f"/source-versions/{published['version_id']}/retire", headers=curator.headers, json=body
+    )
+    assert second.status_code == 409
+    assert second.json() == {"detail": "La versión ya está retirada"}
+
+
+def test_status_changes_leave_a_trace(client, curator, publish_source) -> None:
+    """Publicar y retirar quedan registrados con quién y por qué."""
+    from sqlalchemy import select
+
+    from app.database import SessionLocal
+    from app.models.rag import SourceStatusHistory
+
+    published = publish_source(f"Contenido sobre {_unique_term()} con historial.")
+    client.post(
+        f"/source-versions/{published['version_id']}/retire",
+        headers=curator.headers,
+        json={"reason": "Reemplazada por la gestión 2027"},
+    )
+
+    with SessionLocal() as db:
+        history = list(
+            db.scalars(
+                select(SourceStatusHistory)
+                .where(SourceStatusHistory.source_version_id == published["version_id"])
+                .order_by(SourceStatusHistory.changed_at)
+            )
+        )
+    assert [entry.new_status for entry in history] == ["PUBLISHED", "RETIRED"]
+    assert history[0].previous_status == "REVIEW"
+    assert history[1].previous_status == "PUBLISHED"
+    assert all(entry.changed_by_user_id == curator.user_id for entry in history)
+    assert history[1].reason == "Reemplazada por la gestión 2027"
+
+
+def test_curator_can_list_sources_versions_and_chunks(client, curator, publish_source) -> None:
+    term = _unique_term()
+    published = publish_source(f"Requisitos para una {term} vigente en el país.")
+
+    sources = client.get("/sources", headers=curator.headers)
+    assert sources.status_code == 200
+    listed = {item["id"]: item for item in sources.json()}
+    assert published["source_id"] in listed
+    assert listed[published["source_id"]]["publisher_name"] == "Instituto de Prueba"
+    assert listed[published["source_id"]]["status"] == "PUBLISHED"
+
+    filtered = client.get(
+        "/sources", headers=curator.headers, params={"status": "PUBLISHED"}
+    )
+    assert all(item["status"] == "PUBLISHED" for item in filtered.json())
+
+    versions = client.get(
+        f"/sources/{published['source_id']}/versions", headers=curator.headers
+    )
+    assert versions.status_code == 200
+    version = next(v for v in versions.json() if v["id"] == published["version_id"])
+    assert version["chunk_count"] == 1, "la interfaz necesita saber si se puede publicar"
+    assert version["version_label"] == "2026-01"
+
+    chunks = client.get(
+        f"/source-versions/{published['version_id']}/chunks", headers=curator.headers
+    )
+    assert chunks.status_code == 200
+    assert term in chunks.json()[0]["content"]
+
+
+def test_seeded_publishers_are_listable(client, curator) -> None:
+    """El alta de una fuente necesita elegir la institución, no pegar su UUID."""
+    response = client.get("/source-publishers", headers=curator.headers)
+    assert response.status_code == 200
+    codes = {item["code"] for item in response.json()}
+    assert {"SEPREC", "SIN", "INE", "GACETA"} <= codes
+
+
+def test_listing_an_unknown_source_is_not_found(client, curator) -> None:
+    response = client.get(f"/sources/{uuid.uuid4()}/versions", headers=curator.headers)
+    assert response.status_code == 404
 
 
 def test_a_version_without_chunks_cannot_be_published(client, curator, publisher) -> None:

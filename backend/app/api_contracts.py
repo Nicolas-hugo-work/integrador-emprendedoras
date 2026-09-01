@@ -213,5 +213,63 @@ class SourceChunkCreate(BaseModel):
     token_count: int = Field(gt=0)
 
 
+class PublisherView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    code: str
+    name: str
+    official_domain: str | None
+    country_code: str
+
+
+class SourceView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    publisher_id: str
+    publisher_name: str
+    title: str
+    canonical_url: str
+    jurisdiction: str
+    topic: str
+    license_name: str | None
+    status: str
+
+
+class SourceVersionView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    source_id: str
+    version_label: str
+    publication_date: date | None
+    consulted_at: datetime
+    valid_from: date | None
+    valid_to: date | None
+    content_hash: str
+    storage_key: str
+    status: str
+    #: Permite a la interfaz saber si la versión puede publicarse: publicar sin
+    #: fragmentos responde 409.
+    chunk_count: int
+
+
+class SourceChunkView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    source_version_id: str
+    chunk_number: int
+    heading: str | None
+    content: str
+    page_number: int | None
+    token_count: int
+
+
+class RetireRequest(BaseModel):
+    reason: str = Field(min_length=5, max_length=500)
+
+
 class DeleteAccountRequest(BaseModel):
     confirmation: Literal["ELIMINAR MI CUENTA"]

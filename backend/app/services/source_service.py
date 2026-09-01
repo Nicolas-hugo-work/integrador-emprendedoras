@@ -5,10 +5,22 @@ import hashlib
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api_contracts import (
+    PublisherView,
+    SourceChunkView,
+    SourceVersionView,
+    SourceView,
+)
 from app.core.clock import utc_now
 from app.core.exceptions import Conflict, Invalid, NotFound
 from app.models.identity import User
-from app.models.rag import Source, SourceChunk, SourcePublisher, SourceVersion
+from app.models.rag import (
+    Source,
+    SourceChunk,
+    SourcePublisher,
+    SourceStatusHistory,
+    SourceVersion,
+)
 from app.services.audit_service import write_audit
 from app.services.authorization import assert_permission
 
@@ -86,11 +98,176 @@ def publish_source_version(db: Session, user: User, version_id: str) -> dict[str
     if not chunk_count:
         raise Conflict("No se puede publicar sin fragmentos")
     source = db.get(Source, version.source_id)
+    previous_status = version.status
     version.status = "PUBLISHED"
     if source:
         source.status = "PUBLISHED"
+    _record_status_change(
+        db,
+        version,
+        previous_status=previous_status,
+        new_status="PUBLISHED",
+        user=user,
+        reason=None,
+    )
     write_audit(
         db, actor=user, action="source.publish", object_type="source_version", object_id=version.id
+    )
+    db.commit()
+    return {"id": version.id, "status": version.status}
+
+
+def _record_status_change(
+    db: Session,
+    version: SourceVersion,
+    *,
+    previous_status: str,
+    new_status: str,
+    user: User,
+    reason: str | None,
+) -> None:
+    """Anota la transición en `source_status_history`.
+
+    La tabla existe desde el esquema inicial y hasta v0.2.0 nunca se escribió,
+    de modo que no había forma de saber quién publicó o retiró una fuente.
+    """
+    db.add(
+        SourceStatusHistory(
+            source_version_id=version.id,
+            previous_status=previous_status,
+            new_status=new_status,
+            changed_by_user_id=user.id,
+            reason=reason,
+            changed_at=utc_now(),
+        )
+    )
+
+
+def list_publishers(db: Session, user: User) -> list[PublisherView]:
+    """Instituciones emisoras disponibles.
+
+    Sin esta lectura, dar de alta una fuente obligaría a pegar el UUID de la
+    institución a mano. La migración siembra SEPREC, SIN, INE y la Gaceta
+    Oficial.
+    """
+    assert_permission(db, user, "source.review")
+    rows = db.scalars(select(SourcePublisher).order_by(SourcePublisher.name)).all()
+    return [PublisherView.model_validate(row) for row in rows]
+
+
+def list_sources(db: Session, user: User, *, status: str | None = None) -> list[SourceView]:
+    """Fuentes con su institución emisora, opcionalmente filtradas por estado."""
+    assert_permission(db, user, "source.review")
+    query = (
+        select(Source, SourcePublisher)
+        .join(SourcePublisher, SourcePublisher.id == Source.publisher_id)
+        .order_by(Source.created_at.desc())
+    )
+    if status:
+        query = query.where(Source.status == status)
+    return [
+        SourceView(
+            id=source.id,
+            publisher_id=source.publisher_id,
+            publisher_name=publisher.name,
+            title=source.title,
+            canonical_url=source.canonical_url,
+            jurisdiction=source.jurisdiction,
+            topic=source.topic,
+            license_name=source.license_name,
+            status=source.status,
+        )
+        for source, publisher in db.execute(query).all()
+    ]
+
+
+def list_versions(db: Session, user: User, source_id: str) -> list[SourceVersionView]:
+    """Versiones de una fuente, con cuántos fragmentos tiene cada una."""
+    assert_permission(db, user, "source.review")
+    if db.get(Source, source_id) is None:
+        raise NotFound("Fuente no encontrada")
+    counts = (
+        select(SourceChunk.source_version_id, func.count().label("total"))
+        .group_by(SourceChunk.source_version_id)
+        .subquery()
+    )
+    rows = db.execute(
+        select(SourceVersion, func.coalesce(counts.c.total, 0))
+        .outerjoin(counts, counts.c.source_version_id == SourceVersion.id)
+        .where(SourceVersion.source_id == source_id)
+        .order_by(SourceVersion.created_at.desc())
+    ).all()
+    return [
+        SourceVersionView(
+            id=version.id,
+            source_id=version.source_id,
+            version_label=version.version_label,
+            publication_date=version.publication_date,
+            consulted_at=version.consulted_at,
+            valid_from=version.valid_from,
+            valid_to=version.valid_to,
+            content_hash=version.content_hash,
+            storage_key=version.storage_key,
+            status=version.status,
+            chunk_count=int(total),
+        )
+        for version, total in rows
+    ]
+
+
+def list_chunks(db: Session, user: User, version_id: str) -> list[SourceChunkView]:
+    """Fragmentos indexables de una versión."""
+    assert_permission(db, user, "source.review")
+    if db.get(SourceVersion, version_id) is None:
+        raise NotFound("Versión no encontrada")
+    rows = db.scalars(
+        select(SourceChunk)
+        .where(SourceChunk.source_version_id == version_id)
+        .order_by(SourceChunk.chunk_number)
+    ).all()
+    return [SourceChunkView.model_validate(row) for row in rows]
+
+
+def retire_source_version(db: Session, user: User, version_id: str, payload) -> dict[str, str]:
+    """Retira una versión para que el asistente deje de citarla.
+
+    Es la contraparte de `publish`: sin ella, sacar de circulación una norma
+    desactualizada exigía un `UPDATE` manual en la base. La fuente pasa a
+    `RETIRED` solo si no le queda ninguna otra versión publicada.
+    """
+    assert_permission(db, user, "source.publish")
+    version = db.get(SourceVersion, version_id)
+    if version is None:
+        raise NotFound("Versión no encontrada")
+    if version.status == "RETIRED":
+        raise Conflict("La versión ya está retirada")
+
+    previous_status = version.status
+    version.status = "RETIRED"
+
+    source = db.get(Source, version.source_id)
+    remaining = db.scalar(
+        select(func.count())
+        .select_from(SourceVersion)
+        .where(
+            SourceVersion.source_id == version.source_id,
+            SourceVersion.id != version.id,
+            SourceVersion.status == "PUBLISHED",
+        )
+    )
+    if source and not remaining:
+        source.status = "RETIRED"
+
+    _record_status_change(
+        db,
+        version,
+        previous_status=previous_status,
+        new_status="RETIRED",
+        user=user,
+        reason=payload.reason,
+    )
+    write_audit(
+        db, actor=user, action="source.retire", object_type="source_version", object_id=version.id
     )
     db.commit()
     return {"id": version.id, "status": version.status}

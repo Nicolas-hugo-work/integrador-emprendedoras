@@ -28,6 +28,7 @@ BASELINE = json.loads((CONTRACTS / "openapi_v0_2.json").read_text(encoding="utf-
 #: Operaciones que v0.3.0 agrega, con el motivo. Una ruta nueva que no figure
 #: aquí hace fallar la batería: obliga a declarar cada ampliación de la API.
 APPROVED_NEW_OPERATIONS = {
+    ("/source-publishers", "get"): "Curaduría: instituciones emisoras para el alta",
     ("/sources", "get"): "Curaduría: listar fuentes y su estado",
     ("/sources/{source_id}/versions", "get"): "Curaduría: versiones de una fuente",
     ("/source-versions/{version_id}/chunks", "get"): "Curaduría: fragmentos de una versión",

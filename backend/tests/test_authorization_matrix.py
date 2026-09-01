@@ -87,10 +87,17 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/consents", "post"): Route(AUTHENTICATED),
     ("/privacy/deletion", "post"): Route(AUTHENTICATED),
     ("/privacy/export", "post"): Route(AUTHENTICATED),
+    ("/source-publishers", "get"): Route("source.review"),
+    ("/sources", "get"): Route("source.review"),
     ("/sources", "post"): Route("source.review", _SOURCE_BODY),
+    ("/sources/{source_id}/versions", "get"): Route("source.review"),
+    ("/source-versions/{version_id}/chunks", "get"): Route("source.review"),
     ("/source-versions", "post"): Route("source.review", _VERSION_BODY),
     ("/source-chunks", "post"): Route("source.review", _CHUNK_BODY),
     ("/source-versions/{version_id}/publish", "post"): Route("source.publish"),
+    ("/source-versions/{version_id}/retire", "post"): Route(
+        "source.publish", {"reason": "La norma fue derogada"}
+    ),
 }
 
 
