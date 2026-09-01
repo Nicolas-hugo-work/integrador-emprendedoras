@@ -28,7 +28,7 @@ def create_movement(
 
 @router.get("/categories")
 def list_financial_categories(db: DB, user: CurrentUser) -> list[dict[str, str]]:
-    return finance_service.list_categories(db)
+    return finance_service.list_categories(db, user)
 
 
 @router.get("/movements", response_model=list[FinancialMovementView])

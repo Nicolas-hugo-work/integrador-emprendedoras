@@ -7,11 +7,12 @@ from app.core.clock import utc_now
 from app.models.business import Business, BusinessMembership
 from app.models.identity import User
 from app.services.audit_service import write_audit
-from app.services.authorization import owned_business
+from app.services.authorization import assert_permission, owned_business
 
 
 def create_business(db: Session, user: User, payload) -> Business:
     """Crea un emprendimiento y da de alta a la propietaria como miembro."""
+    assert_permission(db, user, "business.manage_own")
     # Campos explícitos en lugar de `**payload.model_dump()`: así un campo nuevo
     # en el contrato no se escribe solo en el modelo persistente.
     business = Business(
@@ -33,6 +34,7 @@ def create_business(db: Session, user: User, payload) -> Business:
 
 def list_businesses(db: Session, user: User) -> list[Business]:
     """Lista los emprendimientos vigentes de la usuaria."""
+    assert_permission(db, user, "business.manage_own")
     return list(
         db.scalars(
             select(Business)
@@ -44,6 +46,7 @@ def list_businesses(db: Session, user: User) -> list[Business]:
 
 def update_business(db: Session, user: User, business_id: str, payload) -> Business:
     """Corrige los datos del emprendimiento. Solo escribe lo que viene."""
+    assert_permission(db, user, "business.manage_own")
     business = owned_business(db, user, business_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(business, field, value)
@@ -63,6 +66,7 @@ def delete_business(db: Session, user: User, business_id: str) -> None:
     por `deleted_at`, cualquier operación posterior sobre este negocio responde
     404.
     """
+    assert_permission(db, user, "business.manage_own")
     business = owned_business(db, user, business_id)
     business.deleted_at = utc_now()
     write_audit(

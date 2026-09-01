@@ -24,7 +24,7 @@ from app.models.finance import (
 from app.models.identity import User
 from app.security import decrypt_text, encrypt_text
 from app.services.audit_service import write_audit
-from app.services.authorization import owned_business
+from app.services.authorization import assert_permission, owned_business
 
 
 def _to_view(row: FinancialMovement) -> FinancialMovementView:
@@ -48,6 +48,7 @@ def create_movement(db: Session, user: User, payload) -> FinancialMovementView:
     La coherencia de una transferencia ya la valida `FinancialMovementCreate`,
     que delega en `domain_rules.validate_transfer`.
     """
+    assert_permission(db, user, "finance.write_own")
     if payload.business_id:
         owned_business(db, user, payload.business_id)
     elif payload.scope == "BUSINESS":
@@ -80,8 +81,9 @@ def create_movement(db: Session, user: User, payload) -> FinancialMovementView:
     return _to_view(movement)
 
 
-def list_categories(db: Session) -> list[dict[str, str]]:
+def list_categories(db: Session, user: User) -> list[dict[str, str]]:
     """Catálogo de categorías financieras."""
+    assert_permission(db, user, "finance.read_own")
     rows = db.scalars(
         select(FinancialCategory).order_by(FinancialCategory.movement_type, FinancialCategory.name)
     ).all()
@@ -118,6 +120,7 @@ def list_movements(
     date_to: date | None = None,
 ) -> list[FinancialMovementView]:
     """Lista los movimientos de la usuaria, opcionalmente acotados."""
+    assert_permission(db, user, "finance.read_own")
     if business_id:
         owned_business(db, user, business_id)
     query = _movement_query(user, business_id, date_from, date_to)
@@ -127,6 +130,7 @@ def list_movements(
 
 def create_cost(db: Session, user: User, payload) -> dict[str, str]:
     """Registra un costo del emprendimiento."""
+    assert_permission(db, user, "finance.write_own")
     owned_business(db, user, payload.business_id)
     cost = CostItem(
         business_id=payload.business_id,
@@ -146,6 +150,7 @@ def create_cost(db: Session, user: User, payload) -> dict[str, str]:
 
 def create_pricing_scenario(db: Session, user: User, payload) -> dict[str, str]:
     """Calcula un escenario de precio y congela la fotografía de costos."""
+    assert_permission(db, user, "finance.write_own")
     owned_business(db, user, payload.business_id)
     costs = list(
         db.scalars(
@@ -203,6 +208,7 @@ def financial_summary(
     `domain_rules.movement_balance_effect`, en lugar del `if/elif` que `v0.1.0`
     repetía aquí. Las transferencias siguen sin alterar el saldo.
     """
+    assert_permission(db, user, "finance.read_own")
     owned_business(db, user, business_id)
     query = _movement_query(user, business_id, date_from, date_to)
     income, outflow = Decimal("0"), Decimal("0")
@@ -257,6 +263,7 @@ def _owned_cost(db: Session, user: User, cost_id: str) -> CostItem:
 
 def list_costs(db: Session, user: User, *, business_id: str) -> list[CostItemView]:
     """Costos vigentes del emprendimiento."""
+    assert_permission(db, user, "finance.read_own")
     owned_business(db, user, business_id)
     rows = db.scalars(
         select(CostItem)
@@ -273,6 +280,7 @@ def update_movement(db: Session, user: User, movement_id: str, payload) -> Finan
     de fusionar el parche con la fila, no sobre el parche suelto, y la decide
     `domain_rules.validate_transfer`.
     """
+    assert_permission(db, user, "finance.write_own")
     movement = _owned_movement(db, user, movement_id)
     changes = payload.model_dump(exclude_unset=True)
 
@@ -308,6 +316,7 @@ def update_movement(db: Session, user: User, movement_id: str, payload) -> Finan
 
 def delete_movement(db: Session, user: User, movement_id: str) -> None:
     """Borrado lógico: el movimiento deja de contar en listados y resumen."""
+    assert_permission(db, user, "finance.write_own")
     movement = _owned_movement(db, user, movement_id)
     movement.deleted_at = utc_now()
     write_audit(
@@ -322,6 +331,7 @@ def delete_movement(db: Session, user: User, movement_id: str) -> None:
 
 def update_cost(db: Session, user: User, cost_id: str, payload) -> CostItemView:
     """Corrige un costo del emprendimiento."""
+    assert_permission(db, user, "finance.write_own")
     cost = _owned_cost(db, user, cost_id)
     changes = payload.model_dump(exclude_unset=True)
     if "notes" in changes:
@@ -341,6 +351,7 @@ def delete_cost(db: Session, user: User, cost_id: str) -> None:
     `pricing_scenario_costs` guarda `label_snapshot` y `amount_snapshot`, y su
     clave foránea es `ON DELETE SET NULL`.
     """
+    assert_permission(db, user, "finance.write_own")
     cost = _owned_cost(db, user, cost_id)
     cost.deleted_at = utc_now()
     write_audit(db, actor=user, action="finance.delete", object_type="cost_item", object_id=cost.id)

@@ -27,14 +27,17 @@ ANY_ID = str(uuid.uuid4())
 class Route:
     """Una operación expuesta, con su exigencia de acceso.
 
-    `body` solo hace falta en las rutas con permiso: la validación del cuerpo
-    ocurre antes de que el servicio llame a `assert_permission`, así que sin un
-    cuerpo válido la respuesta sería 422 en lugar de 403.
+    `body` y `params` solo hacen falta en las rutas con permiso: FastAPI valida
+    cuerpo y parámetros antes de que el servicio llame a `assert_permission`,
+    así que sin datos válidos la respuesta sería 422 en lugar de 403.
     """
 
-    def __init__(self, access: str, body: dict | None = None) -> None:
+    def __init__(
+        self, access: str, body: dict | None = None, params: dict | None = None
+    ) -> None:
         self.access = access
         self.body = body
+        self.params = params
 
     @property
     def is_public(self) -> bool:
@@ -44,6 +47,38 @@ class Route:
     def permission(self) -> str | None:
         return None if self.access in (PUBLIC, AUTHENTICATED) else self.access
 
+
+_BUSINESS_BODY = {"name": "Prueba", "stage": "IDEA", "activity": "Servicios"}
+_MOVEMENT_BODY = {
+    "category_id": ANY_ID,
+    "movement_type": "INCOME",
+    "scope": "HOUSEHOLD",
+    "amount": "10.00",
+    "currency": "BOB",
+    "occurred_on": "2026-08-31",
+}
+_COST_BODY = {
+    "business_id": ANY_ID,
+    "name": "Insumo",
+    "cost_type": "VARIABLE",
+    "amount": "10.00",
+    "currency": "BOB",
+    "unit": "kg",
+    "periodicity": "MENSUAL",
+    "quantity_base": "1",
+}
+_PRICING_BODY = {
+    "business_id": ANY_ID,
+    "product_name": "Producto",
+    "units": "10",
+    "margin_percent": "20",
+    "cost_item_ids": [ANY_ID],
+    "currency": "BOB",
+}
+_FEEDBACK_BODY = {"message_id": ANY_ID, "feedback_type": "USEFUL"}
+_QUERY_BODY = {"message": "consulta de prueba"}
+#: Un PATCH parcial admite cuerpo vacío: todos sus campos son opcionales.
+_EMPTY: dict = {}
 
 _SOURCE_BODY = {
     "publisher_id": ANY_ID,
@@ -72,25 +107,25 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/auth/refresh", "post"): Route(PUBLIC),
     ("/auth/logout", "post"): Route(AUTHENTICATED),
     ("/me", "get"): Route(AUTHENTICATED),
-    ("/businesses", "get"): Route(AUTHENTICATED),
-    ("/businesses", "post"): Route(AUTHENTICATED),
-    ("/businesses/{business_id}", "patch"): Route(AUTHENTICATED),
-    ("/businesses/{business_id}", "delete"): Route(AUTHENTICATED),
-    ("/finance/categories", "get"): Route(AUTHENTICATED),
-    ("/finance/movements", "get"): Route(AUTHENTICATED),
-    ("/finance/movements", "post"): Route(AUTHENTICATED),
-    ("/finance/movements/{movement_id}", "patch"): Route(AUTHENTICATED),
-    ("/finance/movements/{movement_id}", "delete"): Route(AUTHENTICATED),
-    ("/finance/costs", "get"): Route(AUTHENTICATED),
-    ("/finance/costs", "post"): Route(AUTHENTICATED),
-    ("/finance/costs/{cost_id}", "patch"): Route(AUTHENTICATED),
-    ("/finance/costs/{cost_id}", "delete"): Route(AUTHENTICATED),
-    ("/finance/pricing", "post"): Route(AUTHENTICATED),
-    ("/finance/summary", "get"): Route(AUTHENTICATED),
-    ("/conversations", "get"): Route(AUTHENTICATED),
-    ("/conversations", "post"): Route(AUTHENTICATED),
-    ("/assistant/query", "post"): Route(AUTHENTICATED),
-    ("/feedback", "post"): Route(AUTHENTICATED),
+    ("/businesses", "get"): Route("business.manage_own"),
+    ("/businesses", "post"): Route("business.manage_own", _BUSINESS_BODY),
+    ("/businesses/{business_id}", "patch"): Route("business.manage_own", _EMPTY),
+    ("/businesses/{business_id}", "delete"): Route("business.manage_own"),
+    ("/finance/categories", "get"): Route("finance.read_own"),
+    ("/finance/movements", "get"): Route("finance.read_own"),
+    ("/finance/movements", "post"): Route("finance.write_own", _MOVEMENT_BODY),
+    ("/finance/movements/{movement_id}", "patch"): Route("finance.write_own", _EMPTY),
+    ("/finance/movements/{movement_id}", "delete"): Route("finance.write_own"),
+    ("/finance/costs", "get"): Route("finance.read_own", params={"business_id": ANY_ID}),
+    ("/finance/costs", "post"): Route("finance.write_own", _COST_BODY),
+    ("/finance/costs/{cost_id}", "patch"): Route("finance.write_own", _EMPTY),
+    ("/finance/costs/{cost_id}", "delete"): Route("finance.write_own"),
+    ("/finance/pricing", "post"): Route("finance.write_own", _PRICING_BODY),
+    ("/finance/summary", "get"): Route("finance.read_own", params={"business_id": ANY_ID}),
+    ("/conversations", "get"): Route("conversation.manage_own"),
+    ("/conversations", "post"): Route("conversation.manage_own", _EMPTY),
+    ("/assistant/query", "post"): Route("conversation.manage_own", _QUERY_BODY),
+    ("/feedback", "post"): Route("conversation.manage_own", _FEEDBACK_BODY),
     ("/consents", "get"): Route(AUTHENTICATED),
     ("/consents", "post"): Route(AUTHENTICATED),
     ("/privacy/deletion", "post"): Route(AUTHENTICATED),
@@ -150,7 +185,9 @@ def test_inventory_covers_every_exposed_route() -> None:
 def test_protected_routes_reject_anonymous_requests(client, path, method) -> None:
     """Toda ruta no pública responde 401 sin token."""
     route = INVENTORY[(path, method)]
-    response = client.request(method.upper(), _concrete(path), json=route.body or {})
+    response = client.request(
+        method.upper(), _concrete(path), json=route.body or {}, params=route.params
+    )
     assert response.status_code == 401, f"{method.upper()} {path} respondió {response.status_code}"
 
 
@@ -160,23 +197,85 @@ def test_protected_routes_reject_anonymous_requests(client, path, method) -> Non
     sorted(key for key, route in INVENTORY.items() if route.permission),
     ids=lambda value: str(value),
 )
-def test_permission_routes_reject_users_without_it(client, account, path, method) -> None:
-    """Una emprendedora sin el permiso recibe 403, no 404 ni 422."""
+def test_permission_routes_reject_users_without_it(
+    client, account, curator, path, method
+) -> None:
+    """Quien no tiene el permiso recibe 403, no 404 ni 422.
+
+    Se elige a propósito la cuenta que **carece** del permiso: la curadora para
+    las rutas de emprendedora y la emprendedora para las de curaduría. Así la
+    separación queda probada en las dos direcciones.
+    """
     route = INVENTORY[(path, method)]
-    assert route.permission not in (
-        "profile.manage_own",
-        "finance.read_own",
-        "finance.write_own",
-        "conversation.manage_own",
-    ), "el permiso elegido no debe ser uno que la emprendedora ya tiene"
+    de_curaduria = route.permission in ("source.review", "source.publish")
+    intruder = account if de_curaduria else curator
 
     response = client.request(
-        method.upper(), _concrete(path), headers=account.headers, json=route.body or {}
+        method.upper(),
+        _concrete(path),
+        headers=intruder.headers,
+        json=route.body or {},
+        params=route.params,
     )
     assert response.status_code == 403, (
         f"{method.upper()} {path} respondió {response.status_code}, se esperaba 403"
     )
     assert response.json() == {"detail": "Permiso insuficiente"}
+
+
+@requires_database
+def test_staff_keeps_its_rights_over_its_own_account(client, curator) -> None:
+    """Separar roles no puede quitarle a nadie el control de sus datos.
+
+    `/me`, los consentimientos y la eliminación de cuenta quedan deliberadamente
+    fuera del gateo por permiso: son derechos de toda cuenta, no funciones de un
+    rol. Gatearlos dejaría a la curadora sin poder borrar su propia cuenta.
+    """
+    perfil = client.get("/me", headers=curator.headers)
+    assert perfil.status_code == 200
+    assert perfil.json()["roles"] == ["CURADORA_RAG"]
+    assert perfil.json()["permissions"] == ["source.publish", "source.review"]
+
+    assert client.get("/consents", headers=curator.headers).status_code == 200
+    otorgado = client.post(
+        "/consents",
+        headers=curator.headers,
+        json={"purpose_code": "AUDIO", "version": "1.0", "decision": "WITHDRAWN"},
+    )
+    assert otorgado.status_code == 201
+    assert client.post("/privacy/export", headers=curator.headers).status_code == 202
+    assert client.post(
+        "/privacy/deletion",
+        headers=curator.headers,
+        json={"confirmation": "ELIMINAR MI CUENTA"},
+    ).status_code == 202
+
+
+@requires_database
+def test_staff_cannot_reach_the_entrepreneur_application(client, curator) -> None:
+    """La curadora no ve ni usa negocio, finanzas ni asistente."""
+    assert client.get("/businesses", headers=curator.headers).status_code == 403
+    assert client.get("/finance/movements", headers=curator.headers).status_code == 403
+    assert client.get("/finance/categories", headers=curator.headers).status_code == 403
+    assert client.get("/conversations", headers=curator.headers).status_code == 403
+    assert client.post(
+        "/assistant/query", headers=curator.headers, json={"message": "hola"}
+    ).status_code == 403
+
+
+@requires_database
+def test_a_newly_registered_account_keeps_full_access(client, account) -> None:
+    """Quien se registra sigue teniendo todo lo suyo tras el gateo."""
+    assert client.get("/businesses", headers=account.headers).status_code == 200
+    assert client.get("/finance/movements", headers=account.headers).status_code == 200
+    assert client.get("/finance/categories", headers=account.headers).status_code == 200
+    assert client.get("/conversations", headers=account.headers).status_code == 200
+    creado = client.post(
+        "/businesses",
+        headers=account.headers,
+        json={"name": "Sigue funcionando", "stage": "IDEA", "activity": "Servicios"},
+    )
+    assert creado.status_code == 201, "0002 concede business.manage_own a EMPRENDEDORA"
 
 
 def test_every_declared_permission_exists_in_the_seeded_catalogue() -> None:
@@ -185,6 +284,7 @@ def test_every_declared_permission_exists_in_the_seeded_catalogue() -> None:
         "profile.manage_own", "finance.read_own", "finance.write_own",
         "conversation.manage_own", "source.review", "source.publish",
         "audit.read", "account.suspend", "research.read_anonymized", "jobs.execute",
+        "business.manage_own",
     }
     declared = {route.permission for route in INVENTORY.values() if route.permission}
     assert declared <= seeded, f"permisos inexistentes: {sorted(declared - seeded)}"

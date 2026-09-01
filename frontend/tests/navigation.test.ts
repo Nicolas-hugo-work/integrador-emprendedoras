@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import { NAV_LINKS, visibleLinks } from '../app/lib/navigation';
+import {
+  firstAllowedHref,
+  NAV_LINKS,
+  visibleLinks,
+} from '../app/lib/navigation';
 
 const sin = () => false;
 const con = (permisos: string[]) => (permission: string) =>
   permisos.includes(permission);
+
+const EMPRENDEDORA = con([
+  'business.manage_own',
+  'finance.read_own',
+  'finance.write_own',
+  'conversation.manage_own',
+]);
 
 describe('navegación principal', () => {
   it('es la única fuente: incluye curaduría con su permiso', () => {
@@ -13,7 +24,7 @@ describe('navegación principal', () => {
   });
 
   it('oculta curaduría a quien no tiene el permiso', () => {
-    const rutas = visibleLinks(sin).map((link) => link.href);
+    const rutas = visibleLinks(EMPRENDEDORA).map((link) => link.href);
     expect(rutas).not.toContain('/curaduria');
     expect(rutas).toContain('/finanzas');
   });
@@ -23,11 +34,41 @@ describe('navegación principal', () => {
     expect(rutas).toContain('/curaduria');
   });
 
-  it('siempre deja visibles los enlaces sin permiso', () => {
-    const libres = NAV_LINKS.filter((link) => !link.permission).map(
-      (l) => l.href,
+  it('inicio y mi negocio exigen business.manage_own', () => {
+    for (const href of ['/', '/emprendimiento']) {
+      expect(NAV_LINKS.find((link) => link.href === href)?.permission).toBe(
+        'business.manage_own',
+      );
+    }
+  });
+
+  it('la curadora no ve la aplicación de emprendedora', () => {
+    const rutas = visibleLinks(con(['source.review', 'source.publish'])).map(
+      (link) => link.href,
     );
-    expect(visibleLinks(sin).map((link) => link.href)).toEqual(libres);
-    expect(libres).toContain('/');
+    expect(rutas).not.toContain('/');
+    expect(rutas).not.toContain('/finanzas');
+    expect(rutas).not.toContain('/asistente');
+    expect(rutas).toContain('/curaduria');
+  });
+
+  it('privacidad no exige permiso: es un derecho de toda cuenta', () => {
+    const privacidad = NAV_LINKS.find((link) => link.href === '/privacidad');
+    expect(privacidad?.permission).toBeUndefined();
+    expect(visibleLinks(sin).map((link) => link.href)).toEqual(['/privacidad']);
+  });
+});
+
+describe('primera pantalla tras ingresar', () => {
+  it('la emprendedora aterriza en Inicio', () => {
+    expect(firstAllowedHref(EMPRENDEDORA)).toBe('/');
+  });
+
+  it('la curadora aterriza en Curaduría, no en el panel de emprendedora', () => {
+    expect(firstAllowedHref(con(['source.review']))).toBe('/curaduria');
+  });
+
+  it('un rol sin funciones aterriza en Privacidad y conserva sus derechos', () => {
+    expect(firstAllowedHref(sin)).toBe('/privacidad');
   });
 });
