@@ -6,9 +6,14 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api_contracts import FinancialMovementView
-from app.core.exceptions import Invalid
-from app.domain_rules import calculate_suggested_price, movement_balance_effect
+from app.api_contracts import CostItemView, FinancialMovementView
+from app.core.clock import utc_now
+from app.core.exceptions import Invalid, NotFound
+from app.domain_rules import (
+    calculate_suggested_price,
+    movement_balance_effect,
+    validate_transfer,
+)
 from app.models.finance import (
     CostItem,
     FinancialCategory,
@@ -208,3 +213,135 @@ def financial_summary(
         elif effect < 0:
             outflow += -effect
     return {"income": str(income), "outflow": str(outflow), "balance": str(income - outflow)}
+
+
+def _cost_view(row: CostItem) -> CostItemView:
+    return CostItemView(
+        id=row.id,
+        business_id=row.business_id,
+        name=row.name,
+        cost_type=row.cost_type,
+        amount=row.amount,
+        currency=row.currency,
+        unit=row.unit,
+        periodicity=row.periodicity,
+        quantity_base=row.quantity_base,
+        notes=decrypt_text(row.notes_encrypted) if row.notes_encrypted else None,
+    )
+
+
+def _owned_movement(db: Session, user: User, movement_id: str) -> FinancialMovement:
+    """Movimiento de la usuaria; uno ajeno responde igual que uno inexistente."""
+    movement = db.scalar(
+        select(FinancialMovement).where(
+            FinancialMovement.id == movement_id,
+            FinancialMovement.user_id == user.id,
+            FinancialMovement.deleted_at.is_(None),
+        )
+    )
+    if movement is None:
+        raise NotFound("Movimiento no encontrado")
+    return movement
+
+
+def _owned_cost(db: Session, user: User, cost_id: str) -> CostItem:
+    cost = db.scalar(
+        select(CostItem).where(CostItem.id == cost_id, CostItem.deleted_at.is_(None))
+    )
+    if cost is None:
+        raise NotFound("Costo no encontrado")
+    # La propiedad del costo se deriva de la del emprendimiento.
+    owned_business(db, user, cost.business_id)
+    return cost
+
+
+def list_costs(db: Session, user: User, *, business_id: str) -> list[CostItemView]:
+    """Costos vigentes del emprendimiento."""
+    owned_business(db, user, business_id)
+    rows = db.scalars(
+        select(CostItem)
+        .where(CostItem.business_id == business_id, CostItem.deleted_at.is_(None))
+        .order_by(CostItem.created_at.desc())
+    ).all()
+    return [_cost_view(row) for row in rows]
+
+
+def update_movement(db: Session, user: User, movement_id: str, payload) -> FinancialMovementView:
+    """Corrige un movimiento mal registrado.
+
+    La coherencia de la transferencia se comprueba sobre el estado resultante
+    de fusionar el parche con la fila, no sobre el parche suelto, y la decide
+    `domain_rules.validate_transfer`.
+    """
+    movement = _owned_movement(db, user, movement_id)
+    changes = payload.model_dump(exclude_unset=True)
+
+    final_type = changes.get("movement_type", movement.movement_type)
+    final_scope = changes.get("scope", movement.scope)
+    final_counter_scope = changes.get("counter_scope", movement.counter_scope)
+    try:
+        validate_transfer(final_type, final_scope, final_counter_scope)
+    except ValueError as exc:
+        raise Invalid(str(exc)) from exc
+
+    if "category_id" in changes or "movement_type" in changes:
+        category = db.get(FinancialCategory, changes.get("category_id", movement.category_id))
+        if category is None or category.movement_type != final_type:
+            raise Invalid("Categoría incompatible con el movimiento")
+
+    if "note" in changes:
+        note = changes.pop("note")
+        movement.note_encrypted = encrypt_text(note) if note else None
+    for field, value in changes.items():
+        setattr(movement, field, value)
+
+    write_audit(
+        db,
+        actor=user,
+        action="finance.update",
+        object_type="financial_movement",
+        object_id=movement.id,
+    )
+    db.commit()
+    return _to_view(movement)
+
+
+def delete_movement(db: Session, user: User, movement_id: str) -> None:
+    """Borrado lógico: el movimiento deja de contar en listados y resumen."""
+    movement = _owned_movement(db, user, movement_id)
+    movement.deleted_at = utc_now()
+    write_audit(
+        db,
+        actor=user,
+        action="finance.delete",
+        object_type="financial_movement",
+        object_id=movement.id,
+    )
+    db.commit()
+
+
+def update_cost(db: Session, user: User, cost_id: str, payload) -> CostItemView:
+    """Corrige un costo del emprendimiento."""
+    cost = _owned_cost(db, user, cost_id)
+    changes = payload.model_dump(exclude_unset=True)
+    if "notes" in changes:
+        notes = changes.pop("notes")
+        cost.notes_encrypted = encrypt_text(notes) if notes else None
+    for field, value in changes.items():
+        setattr(cost, field, value)
+    write_audit(db, actor=user, action="finance.update", object_type="cost_item", object_id=cost.id)
+    db.commit()
+    return _cost_view(cost)
+
+
+def delete_cost(db: Session, user: User, cost_id: str) -> None:
+    """Borrado lógico del costo.
+
+    Los escenarios de precio ya calculados no se alteran:
+    `pricing_scenario_costs` guarda `label_snapshot` y `amount_snapshot`, y su
+    clave foránea es `ON DELETE SET NULL`.
+    """
+    cost = _owned_cost(db, user, cost_id)
+    cost.deleted_at = utc_now()
+    write_audit(db, actor=user, action="finance.delete", object_type="cost_item", object_id=cost.id)
+    db.commit()

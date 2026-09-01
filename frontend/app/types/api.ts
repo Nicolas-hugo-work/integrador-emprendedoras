@@ -24,6 +24,10 @@ export type User = {
   status: string;
   locale: string;
   timezone: string;
+  /** Códigos de rol, para mostrar quién es la usuaria. */
+  roles: string[];
+  /** Códigos de permiso: los mismos que verifica el backend. */
+  permissions: string[];
 };
 
 export type BusinessStage =
@@ -90,3 +94,61 @@ export type AssistantAnswer = {
 };
 
 export type ConsentPurpose = 'ACCOUNT' | 'AUDIO' | 'RESEARCH' | 'SECONDARY_USE';
+
+export type ConsentStatus = {
+  purpose_code: ConsentPurpose;
+  name: string;
+  is_required: boolean;
+  withdrawal_effect: string;
+  /** `null` mientras la usuaria no haya decidido nunca sobre esta finalidad. */
+  decision: 'GRANTED' | 'WITHDRAWN' | null;
+  version: string | null;
+  decided_at: string | null;
+  allowed: boolean;
+};
+
+export type Publisher = {
+  id: string;
+  code: string;
+  name: string;
+  official_domain?: string | null;
+  country_code: string;
+};
+
+export type SourceStatus = 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'RETIRED';
+
+export type Source = {
+  id: string;
+  publisher_id: string;
+  publisher_name: string;
+  title: string;
+  canonical_url: string;
+  jurisdiction: string;
+  topic: string;
+  license_name?: string | null;
+  status: SourceStatus;
+};
+
+export type SourceVersion = {
+  id: string;
+  source_id: string;
+  version_label: string;
+  publication_date?: string | null;
+  consulted_at: string;
+  valid_from?: string | null;
+  valid_to?: string | null;
+  content_hash: string;
+  storage_key: string;
+  status: string;
+  chunk_count: number;
+};
+
+export type SourceChunk = {
+  id: string;
+  source_version_id: string;
+  chunk_number: number;
+  heading?: string | null;
+  content: string;
+  page_number?: number | null;
+  token_count: number;
+};

@@ -2,27 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Bot,
-  Goal,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  ShieldCheck,
-  Sparkles,
-  WalletCards,
-  X,
-} from 'lucide-react';
+import { LogOut, Menu, Sparkles, X } from 'lucide-react';
 import { useState } from 'react';
 import { clearTokens } from '../lib/api';
-
-const links = [
-  { href: '/', label: 'Inicio', icon: LayoutDashboard },
-  { href: '/emprendimiento', label: 'Mi negocio', icon: Goal },
-  { href: '/finanzas', label: 'Finanzas', icon: WalletCards },
-  { href: '/asistente', label: 'Asistente', icon: Bot },
-  { href: '/privacidad', label: 'Privacidad', icon: ShieldCheck },
-];
+import { useNavLinks } from '../lib/navigation';
 
 export function AppShell({
   title,
@@ -38,6 +21,8 @@ export function AppShell({
   const path = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // Solo se muestra lo que la usuaria realmente puede hacer.
+  const visible = useNavLinks();
   function logout() {
     clearTokens();
     router.push('/login');
@@ -68,7 +53,7 @@ export function AppShell({
           </button>
         </div>
         <nav className="space-y-1">
-          {links.map(({ href, label, icon: Icon }) => (
+          {visible.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}

@@ -9,11 +9,9 @@ import {
   ChevronRight,
   CircleDollarSign,
   Goal,
-  LayoutDashboard,
   Menu,
   MessageCircleQuestion,
   Plus,
-  ShieldCheck,
   Sparkles,
   TrendingUp,
   UserRound,
@@ -21,20 +19,14 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, clearTokens, hasSession } from './lib/api';
-
-const navItems = [
-  { label: 'Inicio', icon: LayoutDashboard, active: true },
-  { label: 'Mi negocio', icon: Goal, href: '/emprendimiento' },
-  { label: 'Finanzas', icon: WalletCards, href: '/finanzas' },
-  { label: 'Asistente', icon: Bot, href: '/asistente' },
-  { label: 'Privacidad', icon: ShieldCheck, href: '/privacidad' },
-];
+import { useNavLinks } from './lib/navigation';
 
 import type { Business, Movement, Summary } from './types/api';
 
 export default function Home() {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navItems = useNavLinks();
   const [businessName, setBusinessName] = useState('tu negocio');
   const [summary, setSummary] = useState<Summary>({
     income: '0',
@@ -92,12 +84,12 @@ export default function Home() {
           </span>
         </Link>
         <nav className="space-y-1" aria-label="Navegación principal">
-          {navItems.map(({ label, icon: Icon, active, href }) => (
+          {navItems.map(({ label, icon: Icon, href }) => (
             <Link
-              key={label}
-              href={href ?? '/'}
+              key={href}
+              href={href}
               onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${active ? 'bg-primary text-primary-foreground shadow-sm' : 'text-sidebar-foreground hover:bg-sidebar-accent'}`}
+              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${href === '/' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-sidebar-foreground hover:bg-sidebar-accent'}`}
             >
               <Icon className="size-5" />
               {label}

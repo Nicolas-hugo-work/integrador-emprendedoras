@@ -47,6 +47,11 @@ class UserView(BaseModel):
     status: str
     locale: str
     timezone: str
+    #: Códigos de rol, para mostrar quién es la usuaria.
+    roles: list[str] = Field(default_factory=list)
+    #: Códigos de permiso, los mismos que verifica `assert_permission`. La
+    #: interfaz se condiciona por capacidad y no por un rol adivinado.
+    permissions: list[str] = Field(default_factory=list)
 
 
 class BusinessCreate(BaseModel):
@@ -106,6 +111,63 @@ class CostItemCreate(BaseModel):
     periodicity: str = Field(min_length=1, max_length=32)
     quantity_base: Decimal = Field(default=Decimal("1"), gt=0, max_digits=14, decimal_places=4)
     notes: str | None = Field(default=None, max_length=2000)
+
+
+class CostItemView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    business_id: str
+    name: str
+    cost_type: str
+    amount: Decimal
+    currency: str
+    unit: str
+    periodicity: str
+    quantity_base: Decimal
+    notes: str | None = None
+
+
+class CostItemUpdate(BaseModel):
+    """Actualización parcial: solo se escriben los campos presentes."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=180)
+    cost_type: Literal["FIXED", "VARIABLE"] | None = None
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    unit: str | None = Field(default=None, min_length=1, max_length=40)
+    periodicity: str | None = Field(default=None, min_length=1, max_length=32)
+    quantity_base: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=4)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class FinancialMovementUpdate(BaseModel):
+    """Actualización parcial de un movimiento.
+
+    La coherencia de una transferencia no puede validarse aquí: un `PATCH`
+    parcial no conoce el estado final. El servicio fusiona los campos sobre la
+    fila existente y recién entonces llama a `domain_rules.validate_transfer`,
+    de modo que la regla sigue teniendo un solo hogar.
+    """
+
+    category_id: str | None = None
+    movement_type: Literal["INCOME", "EXPENSE", "COST", "TRANSFER"] | None = None
+    scope: Literal["BUSINESS", "HOUSEHOLD"] | None = None
+    counter_scope: Literal["BUSINESS", "HOUSEHOLD"] | None = None
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    occurred_on: date | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class BusinessUpdate(BaseModel):
+    """Actualización parcial de un emprendimiento."""
+
+    name: str | None = Field(default=None, min_length=2, max_length=180)
+    stage: Literal["IDEA", "STARTUP", "OPERATING", "GROWING", "PAUSED"] | None = None
+    activity: str | None = Field(default=None, min_length=2, max_length=180)
+    department_code: str | None = Field(default=None, max_length=8)
+    municipality: str | None = Field(default=None, max_length=120)
 
 
 class ConversationCreate(BaseModel):
@@ -168,6 +230,22 @@ class ConsentDecision(BaseModel):
     decision: Literal["GRANTED", "WITHDRAWN"]
 
 
+class ConsentStatusView(BaseModel):
+    """Estado vigente de una finalidad para la usuaria."""
+
+    purpose_code: str
+    name: str
+    is_required: bool
+    #: Qué ocurre si se retira; el texto lo define la migración.
+    withdrawal_effect: str
+    #: `None` mientras la usuaria no haya decidido nunca sobre esta finalidad.
+    decision: Literal["GRANTED", "WITHDRAWN"] | None
+    version: str | None
+    decided_at: datetime | None
+    #: `domain_rules.optional_feature_allowed` aplicado a la decisión vigente.
+    allowed: bool
+
+
 class FeedbackCreate(BaseModel):
     message_id: str
     feedback_type: Literal["USEFUL", "ERROR", "OUTDATED_SOURCE"]
@@ -206,6 +284,64 @@ class SourceChunkCreate(BaseModel):
     content: str = Field(min_length=20)
     page_number: int | None = Field(default=None, gt=0)
     token_count: int = Field(gt=0)
+
+
+class PublisherView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    code: str
+    name: str
+    official_domain: str | None
+    country_code: str
+
+
+class SourceView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    publisher_id: str
+    publisher_name: str
+    title: str
+    canonical_url: str
+    jurisdiction: str
+    topic: str
+    license_name: str | None
+    status: str
+
+
+class SourceVersionView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    source_id: str
+    version_label: str
+    publication_date: date | None
+    consulted_at: datetime
+    valid_from: date | None
+    valid_to: date | None
+    content_hash: str
+    storage_key: str
+    status: str
+    #: Permite a la interfaz saber si la versión puede publicarse: publicar sin
+    #: fragmentos responde 409.
+    chunk_count: int
+
+
+class SourceChunkView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    source_version_id: str
+    chunk_number: int
+    heading: str | None
+    content: str
+    page_number: int | None
+    token_count: int
+
+
+class RetireRequest(BaseModel):
+    reason: str = Field(min_length=5, max_length=500)
 
 
 class DeleteAccountRequest(BaseModel):

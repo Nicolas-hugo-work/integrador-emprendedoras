@@ -5,9 +5,10 @@ import hashlib
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api_contracts import ConsentStatusView
 from app.core.clock import utc_now
 from app.core.exceptions import Conflict, NotFound
-from app.domain_rules import account_purge_deadline
+from app.domain_rules import account_purge_deadline, optional_feature_allowed
 from app.models.identity import User
 from app.models.privacy import (
     ConsentPurpose,
@@ -17,6 +18,45 @@ from app.models.privacy import (
     UserConsent,
 )
 from app.services.audit_service import write_audit
+
+
+def list_consents(db: Session, user: User) -> list[ConsentStatusView]:
+    """Consentimiento vigente por finalidad.
+
+    `user_consents` es un registro de eventos: la decisión vigente es la última
+    por `decided_at`. Sin esta lectura la pantalla de privacidad mantenía los
+    interruptores solo en el cliente, así que al recargar mostraba un estado
+    que no era el guardado.
+    """
+    purposes = db.scalars(select(ConsentPurpose).order_by(ConsentPurpose.code)).all()
+    decisions = db.execute(
+        select(UserConsent, ConsentVersion.version)
+        .join(ConsentVersion, ConsentVersion.id == UserConsent.consent_version_id)
+        .where(UserConsent.user_id == user.id)
+        .order_by(UserConsent.decided_at)
+    ).all()
+
+    latest: dict[str, tuple[UserConsent, str]] = {}
+    for consent, version in decisions:
+        latest[consent.purpose_id] = (consent, version)
+
+    views: list[ConsentStatusView] = []
+    for purpose in purposes:
+        entry = latest.get(purpose.id)
+        decision = entry[0].decision if entry else None
+        views.append(
+            ConsentStatusView(
+                purpose_code=purpose.code,
+                name=purpose.name,
+                is_required=purpose.is_required,
+                withdrawal_effect=purpose.withdrawal_effect,
+                decision=decision,
+                version=entry[1] if entry else None,
+                decided_at=entry[0].decided_at if entry else None,
+                allowed=optional_feature_allowed(decision),
+            )
+        )
+    return views
 
 
 def decide_consent(db: Session, user: User, payload) -> dict[str, str]:

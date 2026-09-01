@@ -217,6 +217,109 @@ def test_feedback_cannot_target_a_foreign_message(client, make_account) -> None:
     assert repeated.status_code == 409
 
 
+def _business_of(client, owner) -> str:
+    return client.post(
+        "/businesses",
+        headers=owner.headers,
+        json={"name": "Panadería Alba", "stage": "OPERATING", "activity": "Alimentos"},
+    ).json()["id"]
+
+
+def _movement_of(client, owner, business: str) -> str:
+    return client.post(
+        "/finance/movements",
+        headers=owner.headers,
+        json={
+            "business_id": business,
+            "category_id": CATEGORY_INCOME,
+            "movement_type": "INCOME",
+            "scope": "BUSINESS",
+            "amount": "500.00",
+            "currency": "BOB",
+            "occurred_on": "2026-08-31",
+        },
+    ).json()["id"]
+
+
+def _cost_of(client, owner, business: str) -> str:
+    return client.post(
+        "/finance/costs",
+        headers=owner.headers,
+        json={
+            "business_id": business,
+            "name": "Harina",
+            "cost_type": "VARIABLE",
+            "amount": "50.00",
+            "currency": "BOB",
+            "unit": "kg",
+            "periodicity": "MENSUAL",
+            "quantity_base": "1",
+        },
+    ).json()["id"]
+
+
+def test_a_foreign_movement_cannot_be_edited_or_deleted(client, make_account) -> None:
+    """Los verbos de mutación son superficie IDOR nueva en v0.3.0."""
+    alice, bob = make_account(), make_account()
+    movement = _movement_of(client, alice, _business_of(client, alice))
+
+    patched = client.patch(
+        f"/finance/movements/{movement}", headers=bob.headers, json={"amount": "1.00"}
+    )
+    missing_patch = client.patch(
+        f"/finance/movements/{ABSENT_ID}", headers=bob.headers, json={"amount": "1.00"}
+    )
+    assert patched.status_code == 404
+    assert patched.json() == missing_patch.json()
+
+    removed = client.delete(f"/finance/movements/{movement}", headers=bob.headers)
+    assert removed.status_code == 404
+
+    # El movimiento de Alice sigue intacto.
+    assert len(client.get("/finance/movements", headers=alice.headers).json()) == 1
+
+
+def test_a_foreign_cost_cannot_be_edited_or_deleted(client, make_account) -> None:
+    alice, bob = make_account(), make_account()
+    business = _business_of(client, alice)
+    cost = _cost_of(client, alice, business)
+
+    assert (
+        client.patch(
+            f"/finance/costs/{cost}", headers=bob.headers, json={"name": "Robado"}
+        ).status_code
+        == 404
+    )
+    assert client.delete(f"/finance/costs/{cost}", headers=bob.headers).status_code == 404
+    assert (
+        client.get(
+            "/finance/costs", headers=bob.headers, params={"business_id": business}
+        ).status_code
+        == 404
+    )
+    assert len(
+        client.get(
+            "/finance/costs", headers=alice.headers, params={"business_id": business}
+        ).json()
+    ) == 1
+
+
+def test_a_foreign_business_cannot_be_edited_or_deleted(client, make_account) -> None:
+    alice, bob = make_account(), make_account()
+    business = _business_of(client, alice)
+
+    patched = client.patch(
+        f"/businesses/{business}", headers=bob.headers, json={"name": "Secuestrado"}
+    )
+    missing = client.patch(
+        f"/businesses/{ABSENT_ID}", headers=bob.headers, json={"name": "Secuestrado"}
+    )
+    assert patched.status_code == 404
+    assert patched.json() == missing.json()
+    assert client.delete(f"/businesses/{business}", headers=bob.headers).status_code == 404
+    assert client.get("/businesses", headers=alice.headers).json()[0]["name"] == "Panadería Alba"
+
+
 def test_source_curation_requires_a_permission(client, account) -> None:
     """Una emprendedora sin rol de curaduría no puede crear fuentes."""
     response = client.post(
