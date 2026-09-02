@@ -148,6 +148,10 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/sources", "post"): Route("source.review", _SOURCE_BODY),
     ("/sources/{source_id}/versions", "get"): Route("source.review"),
     ("/source-versions/{version_id}/chunks", "get"): Route("source.review"),
+    ("/source-versions/{version_id}/chunks", "post"): Route(
+        "source.review",
+        {"chunks": [{"content": "contenido de prueba suficientemente largo"}]},
+    ),
     ("/source-versions", "post"): Route("source.review", _VERSION_BODY),
     ("/source-chunks", "post"): Route("source.review", _CHUNK_BODY),
     ("/source-versions/{version_id}/publish", "post"): Route("source.publish"),

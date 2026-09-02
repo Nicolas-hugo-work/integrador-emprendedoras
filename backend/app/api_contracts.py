@@ -333,6 +333,25 @@ class SourceCreate(BaseModel):
     license_name: str | None = Field(default=None, max_length=180)
 
 
+class SourceChunkItem(BaseModel):
+    """Un fragmento dentro de una carga masiva.
+
+    Sin `chunk_number` ni `token_count`: los calcula el servidor. El numero
+    correlativo no puede decidirlo el cliente sin arriesgar un choque con
+    `uq_source_chunk_number`, y el recuento de palabras es derivable.
+    """
+
+    heading: str | None = Field(default=None, max_length=500)
+    content: str = Field(min_length=20)
+    page_number: int | None = Field(default=None, gt=0)
+
+
+class SourceChunkBulkCreate(BaseModel):
+    """Tanda completa de fragmentos de un documento."""
+
+    chunks: list[SourceChunkItem] = Field(min_length=1, max_length=500)
+
+
 class SourceChunkCreate(BaseModel):
     source_version_id: str
     chunk_number: int = Field(gt=0)

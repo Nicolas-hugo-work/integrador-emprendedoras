@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query
 from app.api_contracts import (
     PublisherView,
     RetireRequest,
+    SourceChunkBulkCreate,
     SourceChunkCreate,
     SourceChunkView,
     SourceCreate,
@@ -53,6 +54,14 @@ def list_source_chunks(version_id: str, db: DB, user: CurrentUser) -> list[Sourc
 @router.post("/source-chunks", status_code=201)
 def create_source_chunk(payload: SourceChunkCreate, db: DB, user: CurrentUser) -> dict[str, str]:
     return source_service.create_source_chunk(db, user, payload)
+
+
+@router.post("/source-versions/{version_id}/chunks", status_code=201)
+def create_source_chunks(
+    version_id: str, payload: SourceChunkBulkCreate, db: DB, user: CurrentUser
+) -> dict[str, int]:
+    """Carga una tanda completa de fragmentos en una sola transacción."""
+    return source_service.create_source_chunks(db, user, version_id, payload)
 
 
 @router.post("/source-versions/{version_id}/publish")
