@@ -4,20 +4,30 @@ import { SubmitEvent, useCallback, useEffect, useState } from 'react';
 import {
   CircleCheck,
   Eye,
+  Info,
   LoaderCircle,
   Search,
   ShieldAlert,
   ShieldBan,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 
 import { AppShell } from '../components/app-shell';
+import { accountActions } from '../lib/accounts';
 import { api } from '../lib/api';
 import { fieldValue } from '../lib/form';
 import { useSession } from '../lib/session';
 import type { Account, AlertStatus, SecurityAlert } from '../types/api';
 
 const PAGE_SIZE = 50;
+
+const FILTERS: { value: AlertStatus | ''; label: string }[] = [
+  { value: 'OPEN', label: 'Abiertas' },
+  { value: 'ACKNOWLEDGED', label: 'Tomadas' },
+  { value: 'RESOLVED', label: 'Cerradas' },
+  { value: '', label: 'Todas' },
+];
 
 const SEVERITY_STYLE: Record<string, string> = {
   LOW: 'bg-muted text-muted-foreground',
@@ -41,6 +51,35 @@ const ACCOUNT_STYLE: Record<string, string> = {
 
 function describe(reason: unknown, fallback: string): string {
   return reason instanceof Error ? reason.message : fallback;
+}
+
+/** Buscador por contacto completo. Se usa arriba y en el estado vacío. */
+function SearchForm({
+  onSubmit,
+  busy,
+}: {
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
+  busy: boolean;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
+      <label className="min-w-56 flex-1 text-sm font-semibold">
+        Correo o teléfono completo
+        <input
+          required
+          name="contact"
+          placeholder="nombre@correo.com"
+          className="field"
+        />
+      </label>
+      <button
+        disabled={busy}
+        className="flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white disabled:opacity-50"
+      >
+        <Search className="size-4" /> Buscar cuenta
+      </button>
+    </form>
+  );
 }
 
 export default function AdministrationPage() {
@@ -109,15 +148,13 @@ export default function AdministrationPage() {
   async function openAccount(userId: string) {
     await run(async () => {
       setAccount(await api<Account>(`/accounts/${userId}`));
-    }, 'Cuenta cargada desde la alerta.');
+    }, 'Cuenta cargada. Sus acciones están arriba.');
   }
 
   async function lookup(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const contacto = fieldValue(
-      new FormData(event.currentTarget),
-      'contact',
-    ).trim();
+    const form = event.currentTarget;
+    const contacto = fieldValue(new FormData(form), 'contact').trim();
     if (!contacto) return;
     await run(async () => {
       setAccount(
@@ -125,6 +162,7 @@ export default function AdministrationPage() {
           `/accounts/lookup?contact=${encodeURIComponent(contacto)}`,
         ),
       );
+      form.reset();
     }, 'Cuenta encontrada.');
   }
 
@@ -177,44 +215,142 @@ export default function AdministrationPage() {
     );
   }
 
+  const acciones = account ? accountActions(account.status) : null;
+
   return (
     <AppShell eyebrow="Cola de trabajo" title="Administración">
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
-        <section className="space-y-4">
-          <div className="rounded-3xl border bg-card p-6">
-            <div className="flex items-start gap-4">
-              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-50 text-red-700">
-                <ShieldAlert className="size-5" />
-              </span>
-              <div className="flex-1">
+      {/* Una sola columna, en orden de importancia: los avisos y la cuenta
+          seleccionada nunca quedan por debajo de la cola de alertas. */}
+      <div className="mx-auto max-w-4xl space-y-6">
+        {notice && (
+          <p className="rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+            {notice}
+          </p>
+        )}
+        {error && (
+          <p
+            role="alert"
+            className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700"
+          >
+            {error}
+          </p>
+        )}
+
+        {account && acciones && (
+          <section className="rounded-3xl border-2 border-primary/30 bg-card p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
                 <h2 className="font-heading text-lg font-bold">
-                  Alertas de seguridad
+                  Cuenta seleccionada
                 </h2>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  El sistema abre una alerta cuando bloquea una cuenta o una
-                  dirección por intentos fallidos. No registra el contacto
-                  probado.
+                <p className="mt-1 font-mono text-xs break-all text-muted-foreground">
+                  {account.id}
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setAccount(null)}
+                className="flex items-center gap-1 text-sm font-semibold text-muted-foreground"
+              >
+                <X className="size-4" /> Cerrar
+              </button>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              {(['OPEN', 'ACKNOWLEDGED', 'RESOLVED', ''] as const).map(
-                (value) => (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-bold ${ACCOUNT_STYLE[account.status] ?? 'bg-muted'}`}
+              >
+                {account.status}
+              </span>
+              {account.roles.map((rol) => (
+                <span
+                  key={rol}
+                  className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold"
+                >
+                  {rol}
+                </span>
+              ))}
+            </div>
+
+            {acciones.reason ? (
+              <p className="mt-5 flex gap-2 rounded-xl bg-muted p-4 text-sm leading-6 text-muted-foreground">
+                <Info className="mt-0.5 size-4 shrink-0" />
+                {acciones.reason}
+              </p>
+            ) : (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {acciones.canSuspend && (
                   <button
-                    key={value || 'TODAS'}
                     type="button"
-                    onClick={() => setStatus(value)}
-                    className={`rounded-xl border px-3 py-2 text-xs font-bold ${status === value ? 'border-primary bg-primary/5 text-primary' : ''}`}
+                    disabled={busy}
+                    onClick={() => suspend(account)}
+                    className="flex h-11 items-center gap-2 rounded-xl border border-red-200 px-5 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
                   >
-                    {value || 'Todas'}
+                    <ShieldBan className="size-4" /> Suspender
                   </button>
-                ),
-              )}
+                )}
+                {acciones.canReactivate && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => reactivate(account)}
+                    className="flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white disabled:opacity-50"
+                  >
+                    <ShieldCheck className="size-4" /> Reactivar
+                  </button>
+                )}
+              </div>
+            )}
+
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+              Suspender corta el acceso de inmediato y revoca todas las
+              sesiones. No se puede suspender a otra cuenta de administración ni
+              a la propia.
+            </p>
+          </section>
+        )}
+
+        <section className="rounded-3xl border bg-card p-6">
+          <h2 className="font-heading text-lg font-bold">Buscar una cuenta</h2>
+          <p className="mt-1 mb-4 text-sm leading-6 text-muted-foreground">
+            Exige el correo o teléfono <strong>completo</strong>: no admite
+            búsquedas parciales ni devuelve listados. Cada búsqueda queda
+            registrada en la auditoría.
+          </p>
+          <SearchForm onSubmit={lookup} busy={busy} />
+        </section>
+
+        <section className="rounded-3xl border bg-card p-6">
+          <div className="flex items-start gap-4">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-50 text-red-700">
+              <ShieldAlert className="size-5" />
+            </span>
+            <div className="flex-1">
+              <h2 className="font-heading text-lg font-bold">
+                Alertas de seguridad
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                El sistema abre una alerta cuando bloquea una cuenta o una
+                dirección por intentos fallidos. No registra el contacto
+                probado.
+              </p>
             </div>
           </div>
 
-          <div className="rounded-3xl border bg-card p-6">
+          <div className="mt-5 flex flex-wrap gap-2">
+            {FILTERS.map(({ value, label }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setStatus(value)}
+                className={`rounded-xl border px-3 py-2 text-xs font-bold ${status === value ? 'border-primary bg-primary/5 text-primary' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-5">
             {loading ? (
               <div className="grid min-h-40 place-items-center">
                 <LoaderCircle className="animate-spin text-primary" />
@@ -245,7 +381,9 @@ export default function AdministrationPage() {
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {new Date(alert.created_at).toLocaleString('es-BO')}
-                          {alert.user_id ? '' : ' · sin cuenta asociada'}
+                          {alert.user_id
+                            ? ''
+                            : ' · sin cuenta asociada, no hay a quién suspender'}
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-wrap gap-2">
@@ -285,101 +423,22 @@ export default function AdministrationPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No hay alertas con ese estado.
-              </p>
+              <div className="rounded-2xl bg-muted/50 p-6 text-center">
+                <CircleCheck className="mx-auto size-8 text-emerald-600" />
+                <h3 className="mt-3 font-heading font-bold">
+                  {status === 'OPEN'
+                    ? 'No hay alertas abiertas'
+                    : 'No hay alertas con ese filtro'}
+                </h3>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                  {status === 'OPEN'
+                    ? 'Es una buena señal: nadie quedó bloqueado por intentos fallidos. Para actuar sobre una cuenta sin que haya alerta, búscala arriba por su correo o teléfono completo.'
+                    : 'Prueba con otro filtro, o busca una cuenta directamente por su contacto.'}
+                </p>
+              </div>
             )}
           </div>
         </section>
-
-        <aside className="space-y-4">
-          <form
-            onSubmit={lookup}
-            className="grid gap-4 rounded-3xl border bg-card p-6"
-          >
-            <h2 className="font-heading text-lg font-bold">
-              Buscar una cuenta
-            </h2>
-            <p className="text-xs leading-5 text-muted-foreground">
-              Exige el correo o teléfono <strong>completo</strong>: no admite
-              búsquedas parciales ni devuelve listados. Cada búsqueda queda
-              auditada.
-            </p>
-            <label className="text-sm font-semibold">
-              Contacto
-              <input
-                required
-                name="contact"
-                placeholder="nombre@correo.com"
-                className="field"
-              />
-            </label>
-            <button
-              disabled={busy}
-              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white disabled:opacity-50"
-            >
-              <Search className="size-4" /> Buscar
-            </button>
-          </form>
-
-          {account && (
-            <div className="rounded-3xl border bg-card p-6">
-              <h2 className="font-heading text-lg font-bold">Cuenta</h2>
-              <p className="mt-2 font-mono text-xs break-all text-muted-foreground">
-                {account.id}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${ACCOUNT_STYLE[account.status] ?? 'bg-muted'}`}
-                >
-                  {account.status}
-                </span>
-                {account.roles.map((rol) => (
-                  <span
-                    key={rol}
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold"
-                  >
-                    {rol}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-5 grid gap-2">
-                <button
-                  type="button"
-                  disabled={busy || account.status === 'SUSPENDED'}
-                  onClick={() => suspend(account)}
-                  className="flex h-11 items-center justify-center gap-2 rounded-xl border border-red-200 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-40"
-                >
-                  <ShieldBan className="size-4" /> Suspender
-                </button>
-                <button
-                  type="button"
-                  disabled={busy || account.status !== 'SUSPENDED'}
-                  onClick={() => reactivate(account)}
-                  className="flex h-11 items-center justify-center gap-2 rounded-xl border text-sm font-bold disabled:opacity-40"
-                >
-                  <ShieldCheck className="size-4" /> Reactivar
-                </button>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                Suspender corta el acceso de inmediato y revoca todas las
-                sesiones. No se puede suspender a otra cuenta de administración
-                ni a la propia.
-              </p>
-            </div>
-          )}
-
-          {notice && (
-            <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">
-              {notice}
-            </p>
-          )}
-          {error && (
-            <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
-              {error}
-            </p>
-          )}
-        </aside>
       </div>
     </AppShell>
   );
