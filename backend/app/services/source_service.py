@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api_contracts import (
     PublisherView,
+    SourceChunkBulkCreate,
     SourceChunkView,
     SourceVersionView,
     SourceView,
@@ -271,3 +272,93 @@ def retire_source_version(db: Session, user: User, version_id: str, payload) -> 
     )
     db.commit()
     return {"id": version.id, "status": version.status}
+
+
+def _count_words(text: str) -> int:
+    return max(1, len(text.split()))
+
+
+def create_source_chunks(
+    db: Session, user: User, version_id: str, payload: SourceChunkBulkCreate
+) -> dict[str, int]:
+    """Carga una tanda completa de fragmentos en una sola transacción.
+
+    Una petición por fragmento dejaría, ante un fallo a media carga, una versión
+    publicable con el contenido incompleto: el asistente citaría un documento
+    truncado sin que nadie lo note.
+
+    `source_chunks` tiene unicidad sobre `(source_version_id, content_hash)`, y
+    en un documento normativo los párrafos repetidos son frecuentes. En vez de
+    dejar que estalle una violación de integridad, se comprueba antes y se dice
+    cuáles son: es la diferencia entre un mensaje accionable y un error de base.
+    """
+    assert_permission(db, user, "source.review")
+    version = db.get(SourceVersion, version_id)
+    if version is None:
+        raise NotFound("Versión no encontrada")
+
+    hashes = [hashlib.sha256(item.content.encode()).hexdigest() for item in payload.chunks]
+
+    vistos: dict[str, int] = {}
+    repetidos_en_la_tanda = []
+    for posicion, huella in enumerate(hashes, start=1):
+        if huella in vistos:
+            repetidos_en_la_tanda.append(f"{posicion} repite el {vistos[huella]}")
+        else:
+            vistos[huella] = posicion
+    if repetidos_en_la_tanda:
+        raise Invalid(
+            "Hay fragmentos con el mismo contenido: " + "; ".join(repetidos_en_la_tanda)
+        )
+
+    ya_presentes = set(
+        db.scalars(
+            select(SourceChunk.content_hash).where(
+                SourceChunk.source_version_id == version_id,
+                SourceChunk.content_hash.in_(hashes),
+            )
+        )
+    )
+    if ya_presentes:
+        posiciones = [str(vistos[huella]) for huella in sorted(ya_presentes)]
+        raise Invalid(
+            "Estos fragmentos ya están cargados en esta versión: "
+            + ", ".join(sorted(posiciones, key=int))
+        )
+
+    siguiente = (
+        db.scalar(
+            select(func.coalesce(func.max(SourceChunk.chunk_number), 0)).where(
+                SourceChunk.source_version_id == version_id
+            )
+        )
+        or 0
+    ) + 1
+
+    for desplazamiento, (item, huella) in enumerate(zip(payload.chunks, hashes, strict=True)):
+        db.add(
+            SourceChunk(
+                source_version_id=version_id,
+                chunk_number=siguiente + desplazamiento,
+                heading=item.heading,
+                content=item.content,
+                content_hash=huella,
+                page_number=item.page_number,
+                token_count=_count_words(item.content),
+            )
+        )
+
+    write_audit(
+        db,
+        actor=user,
+        action="source.chunks_bulk",
+        object_type="source_version",
+        object_id=version_id,
+        metadata={"count": len(payload.chunks)},
+    )
+    db.commit()
+    return {
+        "created": len(payload.chunks),
+        "first_chunk_number": siguiente,
+        "last_chunk_number": siguiente + len(payload.chunks) - 1,
+    }

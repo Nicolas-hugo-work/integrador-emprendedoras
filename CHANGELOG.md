@@ -6,6 +6,38 @@ Este proyecto utiliza [versionado semántico](https://semver.org/lang/es/):
 - `MINOR` (`0.2.0`): nuevas funciones compatibles.
 - `MAJOR` (`1.0.0`): versión estable o cambios incompatibles.
 
+## [0.6.0] - 2026-09-02
+
+Cargar un documento en la curaduria pasa a ser pegar su texto una vez y revisar
+como quedo partido. Antes habia que pegarlo dos veces: entero para la version, y
+despues trozo por trozo en otro formulario.
+
+### Carga de documentos
+
+- `POST /source-versions/{id}/chunks` recibe la tanda completa de fragmentos y
+  la inserta en **una sola transaccion**. Una peticion por fragmento dejaria,
+  ante un fallo a media carga, una version publicable con el contenido
+  incompleto: el asistente citaria un documento truncado sin que nadie lo note.
+- El numero correlativo y el recuento de palabras los calcula el servidor.
+- `source_chunks` tiene unicidad sobre `(version, hash del contenido)`, y en un
+  documento normativo repetir un parrafo es frecuente. En vez de dejar que
+  estalle una violacion de integridad, se comprueba antes y se dice **cuales**
+  son los repetidos.
+
+### Pantalla de curaduria
+
+- Tres pasos numerados con su estado, en vez de tres formularios sueltos.
+- El texto pegado se divide solo en fragmentos, con vista previa editable: se
+  pueden unir con el anterior, separar en dos o descartar antes de guardar. Los
+  duplicados exactos se descartan y se avisa cuantos.
+- El enlace oficial acepta `www.seprec.gob.bo` sin `https://`: se completa solo.
+- Se explica por que "Publicar" esta deshabilitado en lugar de dejarlo gris y
+  mudo, y la ayuda deja de hablar de "huella SHA-256" para decir para que sirve.
+
+### Sin cambios de esquema
+
+Las 62 tablas, indices, vista y triggers siguen identicos a los de `0.1.0`.
+
 ## [0.5.0] - 2026-09-01
 
 `ADMINISTRADORA` deja de tener una sola pantalla de solo lectura:

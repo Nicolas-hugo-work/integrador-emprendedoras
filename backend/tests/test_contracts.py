@@ -50,6 +50,7 @@ APPROVED_NEW_OPERATIONS = {
     ("/accounts/{user_id}", "get"): "Ficha de la cuenta que señala una alerta",
     ("/accounts/{user_id}/suspend", "post"): "Suspender una cuenta",
     ("/accounts/{user_id}/reactivate", "post"): "Reactivar una cuenta suspendida",
+    ("/source-versions/{version_id}/chunks", "post"): "Carga masiva de fragmentos",
 }
 
 #: Schemas que cambian respecto de v0.2.0. El cambio debe ser aditivo: se

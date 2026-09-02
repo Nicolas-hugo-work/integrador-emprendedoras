@@ -258,6 +258,114 @@ def test_listing_an_unknown_source_is_not_found(client, curator) -> None:
     assert response.status_code == 404
 
 
+def test_a_whole_document_loads_in_one_go(client, curator, publisher) -> None:
+    """Carga masiva: la curadora pega el documento y se guarda de una vez."""
+    fuente = client.post(
+        "/sources",
+        headers=curator.headers,
+        json={
+            "publisher_id": publisher,
+            "title": "Documento por tandas",
+            "canonical_url": f"https://ejemplo.test/{uuid.uuid4().hex}",
+            "topic": "formalización",
+        },
+    ).json()["id"]
+    version = client.post(
+        "/source-versions",
+        headers=curator.headers,
+        json={
+            "source_id": fuente,
+            "version_label": "2026-01",
+            "content_hash": uuid.uuid4().hex + uuid.uuid4().hex,
+            "storage_key": "sources/tanda.txt",
+        },
+    ).json()["id"]
+
+    respuesta = client.post(
+        f"/source-versions/{version}/chunks",
+        headers=curator.headers,
+        json={
+            "chunks": [
+                {"heading": "Primero", "content": f"Contenido inicial sobre {_unique_term()}."},
+                {"content": f"Segundo párrafo, distinto, sobre {_unique_term()}."},
+                {"content": f"Tercer párrafo, también distinto, sobre {_unique_term()}."},
+            ]
+        },
+    )
+    assert respuesta.status_code == 201, respuesta.text
+    assert respuesta.json() == {
+        "created": 3,
+        "first_chunk_number": 1,
+        "last_chunk_number": 3,
+    }
+
+    fragmentos = client.get(
+        f"/source-versions/{version}/chunks", headers=curator.headers
+    ).json()
+    assert [f["chunk_number"] for f in fragmentos] == [1, 2, 3]
+    assert fragmentos[0]["heading"] == "Primero"
+    assert all(f["token_count"] > 0 for f in fragmentos), "el recuento lo calcula el servidor"
+
+    # Una segunda tanda continúa la numeración.
+    segunda = client.post(
+        f"/source-versions/{version}/chunks",
+        headers=curator.headers,
+        json={"chunks": [{"content": f"Cuarto párrafo sobre {_unique_term()}."}]},
+    )
+    assert segunda.json()["first_chunk_number"] == 4
+
+
+def test_repeated_content_is_named_instead_of_breaking(
+    client, curator, publisher
+) -> None:
+    """`uq_source_chunk_hash` rechazaría el duplicado con un error de base."""
+    fuente = client.post(
+        "/sources",
+        headers=curator.headers,
+        json={
+            "publisher_id": publisher,
+            "title": "Documento con repetidos",
+            "canonical_url": f"https://ejemplo.test/{uuid.uuid4().hex}",
+            "topic": "formalización",
+        },
+    ).json()["id"]
+    version = client.post(
+        "/source-versions",
+        headers=curator.headers,
+        json={
+            "source_id": fuente,
+            "version_label": "2026-01",
+            "content_hash": uuid.uuid4().hex + uuid.uuid4().hex,
+            "storage_key": "sources/repetidos.txt",
+        },
+    ).json()["id"]
+
+    repetido = "Un parrafo que aparece dos veces en el mismo documento."
+    dentro = client.post(
+        f"/source-versions/{version}/chunks",
+        headers=curator.headers,
+        json={"chunks": [{"content": repetido}, {"content": repetido}]},
+    )
+    assert dentro.status_code == 422
+    assert "2 repite el 1" in dentro.json()["detail"]
+    assert client.get(
+        f"/source-versions/{version}/chunks", headers=curator.headers
+    ).json() == [], "nada se guarda a medias"
+
+    client.post(
+        f"/source-versions/{version}/chunks",
+        headers=curator.headers,
+        json={"chunks": [{"content": repetido}]},
+    )
+    contra_lo_guardado = client.post(
+        f"/source-versions/{version}/chunks",
+        headers=curator.headers,
+        json={"chunks": [{"content": repetido}]},
+    )
+    assert contra_lo_guardado.status_code == 422
+    assert "ya están cargados" in contra_lo_guardado.json()["detail"]
+
+
 def test_a_version_without_chunks_cannot_be_published(client, curator, publisher) -> None:
     source = client.post(
         "/sources",
