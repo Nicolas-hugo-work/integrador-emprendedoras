@@ -30,13 +30,22 @@ def write_audit(
     object_type: str,
     object_id: str | None,
     result: str = "SUCCESS",
+    metadata: dict | None = None,
 ) -> None:
-    """Registra un evento de auditoría dentro de la transacción en curso."""
+    """Registra un evento de auditoría dentro de la transacción en curso.
+
+    `metadata` guarda el contexto que justifica la acción —por ejemplo el motivo
+    de una suspensión— en la columna `metadata_json`, y entra en el cálculo del
+    hash de integridad. Nunca debe llevar datos personales ni credenciales.
+    """
     if result not in VALID_RESULTS:
         raise ValueError(f"result debe ser uno de {sorted(VALID_RESULTS)}, no {result!r}")
     occurred_at = utc_now()
     pseudonym = hashlib.sha256((actor.id if actor else "system").encode()).hexdigest()[:32]
-    raw = f"{pseudonym}|{action}|{object_type}|{object_id}|{occurred_at.isoformat()}|{result}"
+    raw = (
+        f"{pseudonym}|{action}|{object_type}|{object_id}|"
+        f"{occurred_at.isoformat()}|{result}|{sorted((metadata or {}).items())}"
+    )
     db.add(
         AuditEvent(
             actor_user_id=actor.id if actor else None,
@@ -48,6 +57,7 @@ def write_audit(
             occurred_at=occurred_at,
             correlation_id=str(uuid4()),
             integrity_hash=hashlib.sha256(raw.encode()).hexdigest(),
+            metadata_json=metadata,
         )
     )
 

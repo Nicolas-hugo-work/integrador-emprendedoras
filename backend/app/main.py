@@ -16,6 +16,7 @@ from app.config import get_settings
 from app.core.exceptions import AppError
 from app.routers import (
     account,
+    administration,
     assistant,
     audit,
     auth,
@@ -27,7 +28,18 @@ from app.routers import (
 )
 
 #: El orden determina el de las rutas en el documento OpenAPI.
-ROUTERS = (system, auth, account, businesses, finance, assistant, privacy, sources, audit)
+ROUTERS = (
+    system,
+    auth,
+    account,
+    businesses,
+    finance,
+    assistant,
+    privacy,
+    sources,
+    audit,
+    administration,
+)
 
 
 def create_app() -> FastAPI:

@@ -129,27 +129,42 @@ def account(make_account) -> Account:
 
 
 @pytest.fixture
-def curator(make_account) -> Account:
-    """Usuaria con **solo** el rol CURADORA_RAG.
+def make_staff(make_account):
+    """Fábrica de cuentas con **un solo** rol de personal.
 
     El rol se reemplaza en vez de acumularse, igual que hace
     `scripts/seed_test_users.py`. Si conservara el `EMPRENDEDORA` que otorga el
-    registro tendría todos los permisos y no serviría para probar que el staff
-    no alcanza las pantallas de emprendedora.
+    registro tendría todos los permisos y no serviría para probar que cada rol
+    accede solo a lo suyo.
     """
     from sqlalchemy import delete, select
 
     from app.database import SessionLocal
     from app.models.identity import Role, UserRole
 
-    created = make_account()
-    with SessionLocal() as db:
-        role = db.scalar(select(Role).where(Role.code == "CURADORA_RAG"))
-        assert role is not None, "la migración siembra el rol CURADORA_RAG"
-        db.execute(delete(UserRole).where(UserRole.user_id == created.user_id))
-        db.add(UserRole(user_id=created.user_id, role_id=role.id))
-        db.commit()
-    return created
+    def factory(role_code: str) -> Account:
+        created = make_account()
+        with SessionLocal() as db:
+            role = db.scalar(select(Role).where(Role.code == role_code))
+            assert role is not None, f"la migración siembra el rol {role_code}"
+            db.execute(delete(UserRole).where(UserRole.user_id == created.user_id))
+            db.add(UserRole(user_id=created.user_id, role_id=role.id))
+            db.commit()
+        return created
+
+    return factory
+
+
+@pytest.fixture
+def curator(make_staff) -> Account:
+    """Usuaria con solo el rol CURADORA_RAG."""
+    return make_staff("CURADORA_RAG")
+
+
+@pytest.fixture
+def administrator(make_staff) -> Account:
+    """Usuaria con solo el rol ADMINISTRADORA: `audit.read` y `account.suspend`."""
+    return make_staff("ADMINISTRADORA")
 
 
 @pytest.fixture

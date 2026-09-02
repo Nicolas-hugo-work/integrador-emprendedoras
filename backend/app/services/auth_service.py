@@ -18,6 +18,7 @@ from app.models.privacy import ConsentPurpose, ConsentVersion, UserConsent
 from app.security import create_access_token, hash_password, hash_token, new_opaque_token, verify_password
 from app.services.audit_service import write_audit
 from app.services.rate_limit import login_ip_limiter, login_limiter, verification_limiter
+from app.services.security_service import raise_lockout_alert
 
 settings = get_settings()
 
@@ -169,12 +170,22 @@ def verify_contact(db: OrmSession, payload, *, client_key: str) -> dict[str, str
         )
     )
     if challenge is None:
-        verification_limiter.record_failure(client_key)
+        _alert_on_lockout(
+            db,
+            verification_limiter.record_failure(client_key),
+            "verification.address_locked",
+            verification_limiter.max_attempts,
+        )
         raise BadRequest("Código inválido o vencido")
     contact = db.get(UserContact, challenge.contact_id)
     user = db.get(User, contact.user_id if contact else "")
     if contact is None or user is None:
-        verification_limiter.record_failure(client_key)
+        _alert_on_lockout(
+            db,
+            verification_limiter.record_failure(client_key),
+            "verification.address_locked",
+            verification_limiter.max_attempts,
+        )
         raise BadRequest("Cuenta no disponible")
     contact.verified_at = utc_now()
     challenge.consumed_at = utc_now()
@@ -207,8 +218,8 @@ def login(db: OrmSession, payload, *, client_key: str) -> TokenPair:
         or user.status != "ACTIVE"
         or not verify_password(credential.password_hash, payload.password)
     ):
-        login_limiter.record_failure(contact_key)
-        login_ip_limiter.record_failure(client_key)
+        bloqueo_de_cuenta = login_limiter.record_failure(contact_key)
+        bloqueo_de_direccion = login_ip_limiter.record_failure(client_key)
         if user is not None:
             write_audit(
                 db,
@@ -218,6 +229,24 @@ def login(db: OrmSession, payload, *, client_key: str) -> TokenPair:
                 object_id=user.id,
                 result="FAILED",
             )
+        if bloqueo_de_cuenta:
+            raise_lockout_alert(
+                db,
+                alert_type="login.contact_locked",
+                attempts=login_limiter.max_attempts,
+                user=user,
+            )
+        if bloqueo_de_direccion:
+            raise_lockout_alert(
+                db,
+                alert_type="login.address_locked",
+                attempts=login_ip_limiter.max_attempts,
+                user=user,
+            )
+        # Se confirma siempre que haya algo que escribir: antes solo se hacía
+        # cuando la cuenta existía, y una alerta por contacto desconocido
+        # también debe quedar guardada.
+        if user is not None or bloqueo_de_cuenta or bloqueo_de_direccion:
             db.commit()
         raise Unauthorized("Credenciales inválidas")
 
@@ -272,3 +301,11 @@ def _guard(limiter, key: str) -> None:
     retry_after = limiter.retry_after(key)
     if retry_after:
         raise TooManyRequests(f"Demasiados intentos. Reintente en {retry_after} segundos.")
+
+
+def _alert_on_lockout(db: OrmSession, transicion: bool, alert_type: str, attempts: int) -> None:
+    """Levanta la alerta solo si el intento provocó el bloqueo."""
+    if not transicion:
+        return
+    raise_lockout_alert(db, alert_type=alert_type, attempts=attempts)
+    db.commit()

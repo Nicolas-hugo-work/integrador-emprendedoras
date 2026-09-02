@@ -11,21 +11,9 @@ pytestmark = requires_database
 
 
 @pytest.fixture
-def auditor(make_account):
-    """Cuenta con **solo** el rol AUDITORA_INVESTIGADORA."""
-    from sqlalchemy import delete, select
-
-    from app.database import SessionLocal
-    from app.models.identity import Role, UserRole
-
-    created = make_account()
-    with SessionLocal() as db:
-        role = db.scalar(select(Role).where(Role.code == "AUDITORA_INVESTIGADORA"))
-        assert role is not None
-        db.execute(delete(UserRole).where(UserRole.user_id == created.user_id))
-        db.add(UserRole(user_id=created.user_id, role_id=role.id))
-        db.commit()
-    return created
+def auditor(make_staff):
+    """Cuenta con solo el rol AUDITORA_INVESTIGADORA."""
+    return make_staff("AUDITORA_INVESTIGADORA")
 
 
 def test_the_trail_never_exposes_the_real_actor(client, auditor) -> None:
@@ -47,19 +35,8 @@ def test_an_entrepreneur_cannot_read_the_trail(client, account) -> None:
     assert response.json() == {"detail": "Permiso insuficiente"}
 
 
-def test_the_administrator_reads_the_same_trail(client, make_account) -> None:
-    from sqlalchemy import delete, select
-
-    from app.database import SessionLocal
-    from app.models.identity import Role, UserRole
-
-    admin = make_account()
-    with SessionLocal() as db:
-        role = db.scalar(select(Role).where(Role.code == "ADMINISTRADORA"))
-        db.execute(delete(UserRole).where(UserRole.user_id == admin.user_id))
-        db.add(UserRole(user_id=admin.user_id, role_id=role.id))
-        db.commit()
-    assert client.get("/audit-events", headers=admin.headers).status_code == 200
+def test_the_administrator_reads_the_same_trail(client, administrator) -> None:
+    assert client.get("/audit-events", headers=administrator.headers).status_code == 200
 
 
 def test_the_trail_can_be_filtered_and_paged(client, account, auditor) -> None:
