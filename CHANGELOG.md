@@ -6,6 +6,108 @@ Este proyecto utiliza [versionado semántico](https://semver.org/lang/es/):
 - `MINOR` (`0.2.0`): nuevas funciones compatibles.
 - `MAJOR` (`1.0.0`): versión estable o cambios incompatibles.
 
+## [0.7.0] - 2026-09-02
+
+Primero medir, despues mejorar. El asistente es la funcion mas visible del
+proyecto y hasta ahora no habia forma de saber si un cambio lo mejoraba o lo
+empeoraba. Esta version construye el banco de evaluacion, cambia la recuperacion
+y **mide el cambio** en vez de afirmarlo.
+
+### Banco de evaluacion
+
+- Siete operaciones nuevas bajo `/evaluation` (49 -> 56), sobre las cuatro
+  tablas que el esquema inicial traia dormidas: `evaluation_sets`,
+  `evaluation_cases`, `evaluation_runs` y `evaluation_results`. **Sin cambios de
+  esquema y sin migracion.**
+- Que se le exige a una respuesta lo decide la `category` del caso, que ya era
+  una taxonomia cerrada en la base. Quien redacta un caso no puede inventarse
+  una expectativa que nadie sabe verificar.
+- `assistant_service.evaluate_message` separa calcular la respuesta de guardar
+  la conversacion. El banco recorre **el mismo camino** que atiende a las
+  usuarias, no una copia que divergiria en silencio; hay una prueba de que las
+  dos dan la misma respuesta.
+- Ejecutar una tanda no crea conversaciones, mensajes ni `AIRun`. Tambien hay
+  prueba de eso: evaluar no debe ensuciar las conversaciones de nadie.
+- Leer el banco lo puede la curaduria **o** la auditoria. Para expresarlo,
+  `authorization.py` gana `assert_any_permission`: hasta ahora toda ruta exigia
+  un permiso unico. La auditora lee y compara, pero no ejecuta.
+- `INJECTION` y `PII` hoy pasan por construccion, porque sin generacion el
+  sistema no puede desviarse ni inventar. Se vigilan igual: el dia que se agregue
+  un modelo generativo esas garantias dejan de ser gratis, y ese es el dia en que
+  el banco tiene que avisar.
+
+### Recuperacion: de `LIKE` a `FULLTEXT`
+
+`_retrieve_published` pasa a usar `idx_source_chunks_fulltext`, creado en la
+migracion `0001` y **nunca usado hasta hoy**. Tres cosas que antes no existian:
+
+- **Orden por relevancia.** Antes tomaba los tres primeros que encontrara, en el
+  orden que devolviera la base.
+- **Coincidencia por palabra completa**, no por subcadena.
+- **Descarte de palabras vacias**, en vez de buscar «para» o «necesito».
+
+Ademas, una consulta sin ninguna palabra utilizable ahora se abstiene. Antes
+devolvia tres fragmentos cualesquiera: citar algo que no viene al caso enganna
+mas que decir que no se sabe.
+
+`AIRun.model_version` pasa de `v1` a `v2`, para que cada corrida quede atribuida
+a la implementacion que la produjo. **Esto cambia lo que el asistente responde**,
+a proposito.
+
+### La medicion
+
+Sobre el conjunto sembrado por `scripts/seed_evaluation_set.py` —ocho documentos
+con vocabulario compartido, diez casos de las siete categorias—, la misma tanda
+corrida con las dos recuperaciones:
+
+| Medida | v1 (`LIKE`) | v2 (`FULLTEXT`) |
+|---|---|---|
+| Casos que pasan | 90 % | 100 % |
+| Recuperacion (recall) | 80 % | 100 % |
+| Respuestas con cita | 80 % | 80 % |
+| Con advertencia normativa | 50 % | 50 % |
+| Abstenciones | 20 % | 20 % |
+
+Dos casos cambiaron, los dos tributarios: con `LIKE` el asistente citaba los
+documentos equivocados —los que compartian las palabras corrientes del
+dominio— y en `SAFE-01` llegaba a advertir correctamente **citando otra cosa**.
+Es una mejora modesta y medida sobre diez casos, no un salto; el valor de la
+version es que ahora se puede afirmar cual es.
+
+### Pantalla de evaluacion
+
+- `/evaluacion`, visible para curaduria y auditoria. El enlace va despues de
+  Curaduria, Administracion y Auditoria: ninguna de las dos empieza su trabajo
+  aqui, y la navegacion decide donde aterriza cada rol.
+- Conjuntos con sus casos y su categoria, boton para ejecutar, y **comparacion
+  entre dos corridas**, que es el punto de todo esto.
+- La navegacion admite enlaces que abre cualquiera de varios permisos, igual que
+  `assert_any_permission` en el backend.
+
+### Guiones
+
+- `scripts/create_test_databases.py` recrea `kawsay_test` y `kawsay_migration`.
+  La purga de Docker se las habia llevado, y reconstruirlas de memoria cada vez
+  es tiempo perdido.
+- `scripts/seed_evaluation_set.py` publica su propio corpus, con distractores
+  que comparten vocabulario, para que la comparacion no dependa de lo que cada
+  quien tenga cargado.
+- `scripts/compare_retrieval.py` corre la misma tanda con las dos
+  recuperaciones. Conserva el `LIKE` de `v0.1.0` como material de laboratorio:
+  no vuelve a la aplicacion.
+
+### Pruebas
+
+- Backend 265 -> 303; frontend 35 -> 50. Ninguna omitida.
+- Las pruebas RAG dejan de consultar con palabras corrientes. La base de prueba
+  se conserva entre ejecuciones, asi que una consulta con «sobre» acababa
+  recuperando el documento de otra prueba.
+- El inventario de autorizacion admite rutas que abre cualquiera de varios
+  permisos, y elige como intrusa a quien carece de **todos**.
+- Un caso cuyo enunciado no se puede descifrar dice cual es y que la clave no
+  corresponde, en vez de tumbar la tanda con un 500 mudo. No se anota como
+  fallido: confundiria «respondio mal» con «no pudimos leer la pregunta».
+
 ## [0.6.0] - 2026-09-02
 
 Cargar un documento en la curaduria pasa a ser pegar su texto una vez y revisar

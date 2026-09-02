@@ -187,3 +187,63 @@ export type Account = {
   roles: string[];
   created_at: string;
 };
+
+export type EvaluationCategory =
+  | 'FORMALIZATION'
+  | 'FINANCE'
+  | 'MARKETING'
+  | 'SAFETY'
+  | 'INJECTION'
+  | 'PII'
+  | 'NO_EVIDENCE';
+
+export type EvaluationSet = {
+  id: string;
+  name: string;
+  version: string;
+  description?: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type EvaluationCase = {
+  id: string;
+  case_code: string;
+  category: EvaluationCategory;
+  prompt: string;
+  expected_behavior: string;
+  expected_source_version_ids: string[];
+};
+
+export type EvaluationResult = {
+  case_id: string;
+  case_code: string;
+  category: EvaluationCategory;
+  passed: boolean;
+  /** Versiones esperadas que la recuperación trajo, sobre las esperadas. */
+  retrieval_recall: number;
+  citation_present: boolean;
+  /** La advertencia **normativa**; la de abstención no cuenta. */
+  warning_complete: boolean;
+  abstained: boolean;
+  notes?: string | null;
+};
+
+export type EvaluationRun = {
+  id: string;
+  evaluation_set_id: string;
+  evaluation_set_name: string;
+  evaluation_set_version: string;
+  model_name: string;
+  /** Distingue la implementación de recuperación que produjo la corrida. */
+  model_version: string;
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED';
+  created_at: string;
+  completed_at?: string | null;
+  total_cases: number;
+  passed_cases: number;
+};
+
+export type EvaluationRunDetail = EvaluationRun & {
+  results: EvaluationResult[];
+};

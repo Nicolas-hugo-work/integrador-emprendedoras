@@ -9,6 +9,8 @@ Las pruebas funcionales corren contra MariaDB real, no SQLite: el esquema usa
 """
 
 import os
+import random
+import string
 import subprocess
 import sys
 import uuid
@@ -165,6 +167,87 @@ def curator(make_staff) -> Account:
 def administrator(make_staff) -> Account:
     """Usuaria con solo el rol ADMINISTRADORA: `audit.read` y `account.suspend`."""
     return make_staff("ADMINISTRADORA")
+
+
+@pytest.fixture
+def auditor(make_staff) -> Account:
+    """Usuaria con solo el rol AUDITORA_INVESTIGADORA: `audit.read`, sin `source.review`."""
+    return make_staff("AUDITORA_INVESTIGADORA")
+
+
+def unique_term() -> str:
+    """Palabra alfabética irrepetible, apta para el filtro `[a-záéíóúñ]+`."""
+    return "".join(random.choices(string.ascii_lowercase, k=20))
+
+
+@pytest.fixture
+def publisher() -> str:
+    from app.database import SessionLocal
+    from app.models.rag import SourcePublisher
+
+    with SessionLocal() as db:
+        row = SourcePublisher(
+            code=f"T{uuid.uuid4().hex[:12]}",
+            name="Instituto de Prueba",
+            official_domain="ejemplo.test",
+            country_code="BO",
+        )
+        db.add(row)
+        db.commit()
+        return row.id
+
+
+@pytest.fixture
+def publish_source(client, curator, publisher):
+    """Publica una fuente con un fragmento que contiene el texto indicado."""
+
+    def factory(content: str) -> dict[str, str]:
+        source = client.post(
+            "/sources",
+            headers=curator.headers,
+            json={
+                "publisher_id": publisher,
+                "title": "Guía oficial de prueba",
+                "canonical_url": f"https://ejemplo.test/{uuid.uuid4().hex}",
+                "topic": "formalización",
+                "jurisdiction": "Bolivia",
+            },
+        )
+        assert source.status_code == 201, source.text
+
+        version = client.post(
+            "/source-versions",
+            headers=curator.headers,
+            json={
+                "source_id": source.json()["id"],
+                "version_label": "2026-01",
+                "content_hash": uuid.uuid4().hex + uuid.uuid4().hex,
+                "storage_key": f"sources/{uuid.uuid4().hex}.pdf",
+            },
+        )
+        assert version.status_code == 201, version.text
+
+        chunk = client.post(
+            "/source-chunks",
+            headers=curator.headers,
+            json={
+                "source_version_id": version.json()["id"],
+                "chunk_number": 1,
+                "heading": "Requisitos",
+                "content": content,
+                "token_count": 40,
+            },
+        )
+        assert chunk.status_code == 201, chunk.text
+
+        published = client.post(
+            f"/source-versions/{version.json()['id']}/publish", headers=curator.headers
+        )
+        assert published.status_code == 200, published.text
+        assert published.json()["status"] == "PUBLISHED"
+        return {"source_id": source.json()["id"], "version_id": version.json()["id"]}
+
+    return factory
 
 
 @pytest.fixture

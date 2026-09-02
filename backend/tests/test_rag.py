@@ -1,98 +1,24 @@
 """Asistente RAG: solo fuentes publicadas, abstención, advertencia y citas.
 
-La recuperación queda congelada en las coincidencias `LIKE` de `v0.1.0`. Cada
-prueba usa un término inventado y único para no depender de los datos que otras
-pruebas hayan dejado publicados.
+Cada prueba usa un término inventado y único para no depender de los datos que
+otras hayan dejado publicados, y **consulta solo por ese término**: la base de
+prueba se conserva entre ejecuciones, así que una consulta que incluya una
+palabra corriente —«sobre», «consulta»— acabaría recuperando el documento de
+otra prueba. Las palabras de menos de cuatro letras no llegan a la búsqueda, de
+modo que sirven de relleno.
 """
 
-import random
-import string
 import uuid
 
-import pytest
 from conftest import requires_database
+from conftest import unique_term as _unique_term
 
 pytestmark = requires_database
 
 
-def _unique_term() -> str:
-    """Palabra alfabética irrepetible, apta para el filtro `[a-záéíóúñ]+`."""
-    return "".join(random.choices(string.ascii_lowercase, k=20))
-
-
-@pytest.fixture
-def publisher() -> str:
-    from app.database import SessionLocal
-    from app.models.rag import SourcePublisher
-
-    with SessionLocal() as db:
-        row = SourcePublisher(
-            code=f"T{uuid.uuid4().hex[:12]}",
-            name="Instituto de Prueba",
-            official_domain="ejemplo.test",
-            country_code="BO",
-        )
-        db.add(row)
-        db.commit()
-        return row.id
-
-
-@pytest.fixture
-def publish_source(client, curator, publisher):
-    """Publica una fuente con un fragmento que contiene el texto indicado."""
-
-    def factory(content: str) -> dict[str, str]:
-        source = client.post(
-            "/sources",
-            headers=curator.headers,
-            json={
-                "publisher_id": publisher,
-                "title": "Guía oficial de prueba",
-                "canonical_url": f"https://ejemplo.test/{uuid.uuid4().hex}",
-                "topic": "formalización",
-                "jurisdiction": "Bolivia",
-            },
-        )
-        assert source.status_code == 201, source.text
-
-        version = client.post(
-            "/source-versions",
-            headers=curator.headers,
-            json={
-                "source_id": source.json()["id"],
-                "version_label": "2026-01",
-                "content_hash": uuid.uuid4().hex + uuid.uuid4().hex,
-                "storage_key": f"sources/{uuid.uuid4().hex}.pdf",
-            },
-        )
-        assert version.status_code == 201, version.text
-
-        chunk = client.post(
-            "/source-chunks",
-            headers=curator.headers,
-            json={
-                "source_version_id": version.json()["id"],
-                "chunk_number": 1,
-                "heading": "Requisitos",
-                "content": content,
-                "token_count": 40,
-            },
-        )
-        assert chunk.status_code == 201, chunk.text
-
-        published = client.post(
-            f"/source-versions/{version.json()['id']}/publish", headers=curator.headers
-        )
-        assert published.status_code == 200, published.text
-        assert published.json()["status"] == "PUBLISHED"
-        return {"source_id": source.json()["id"], "version_id": version.json()["id"]}
-
-    return factory
-
-
 def test_abstains_without_evidence(client, account) -> None:
     response = client.post(
-        "/assistant/query", headers=account.headers, json={"message": f"consulta sobre {_unique_term()}"}
+        "/assistant/query", headers=account.headers, json={"message": f"que es {_unique_term()}"}
     )
     assert response.status_code == 200, response.text
     body = response.json()
@@ -152,7 +78,7 @@ def test_retired_versions_stop_being_retrieved(
     published = publish_source(f"Una {term} debe renovar su registro cada gestión.")
 
     found = client.post(
-        "/assistant/query", headers=account.headers, json={"message": f"sobre la {term}"}
+        "/assistant/query", headers=account.headers, json={"message": f"que es {term}"}
     )
     assert found.json()["abstained"] is False
 
@@ -165,7 +91,7 @@ def test_retired_versions_stop_being_retrieved(
     assert retired.json()["status"] == "RETIRED"
 
     after = client.post(
-        "/assistant/query", headers=account.headers, json={"message": f"sobre la {term}"}
+        "/assistant/query", headers=account.headers, json={"message": f"que es {term}"}
     )
     assert after.json()["abstained"] is True, "una versión retirada no puede citarse"
     assert after.json()["citations"] == []
@@ -449,3 +375,42 @@ def test_messages_keep_their_sequence(client, account) -> None:
             )
         )
     assert sequences == [1, 2, 3, 4], "usuaria y asistente alternan sin huecos ni choques"
+
+
+def test_the_most_relevant_fragment_is_cited_first(client, account, publish_source) -> None:
+    """Lo que aporta el índice `FULLTEXT` frente al `LIKE` que había antes.
+
+    Con `LIKE` los tres fragmentos salían en el orden que devolviera la base;
+    aquí sale primero el que más veces menciona lo consultado.
+    """
+    term = _unique_term()
+    de_paso = publish_source(
+        f"El documento trata sobre plazos y aranceles, y menciona {term} una sola vez."
+    )
+    central = publish_source(
+        f"La {term} se define aqui. Para obtener una {term} hay requisitos, y la {term} "
+        f"caduca. Renovar la {term} exige presentar la {term} anterior."
+    )
+
+    response = client.post(
+        "/assistant/query", headers=account.headers, json={"message": f"que es {term}"}
+    )
+    assert response.status_code == 200, response.text
+    citas = response.json()["citations"]
+    versiones = [cita["source_version_id"] for cita in citas]
+    assert central["version_id"] in versiones
+    assert de_paso["version_id"] in versiones
+    assert versiones[0] == central["version_id"], "primero el más relevante, no el primero hallado"
+
+
+def test_a_query_without_usable_terms_abstains(client, account, publish_source) -> None:
+    """Antes citaba tres fragmentos cualesquiera; ahora dice que no sabe."""
+    publish_source(
+        f"La {_unique_term()} figura en el registro publicado de la entidad emisora."
+    )
+
+    response = client.post("/assistant/query", headers=account.headers, json={"message": "y eso?"})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["abstained"] is True
+    assert body["citations"] == []

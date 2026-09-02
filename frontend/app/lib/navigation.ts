@@ -3,6 +3,7 @@
 import {
   BookOpenCheck,
   Bot,
+  FlaskConical,
   Goal,
   LayoutDashboard,
   ScrollText,
@@ -18,8 +19,15 @@ export type NavLink = {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Código de permiso requerido. Sin él, el enlace es visible para todas. */
-  permission?: string;
+  /**
+   * Permiso requerido. Sin él, el enlace es visible para todas.
+   *
+   * Una lista significa «cualquiera de estos», igual que
+   * `assert_any_permission` en el backend: el banco de evaluación lo abren la
+   * curaduría y la auditoría, y declararlo con un permiso solo escondería el
+   * enlace a la mitad de quienes pueden entrar.
+   */
+  permission?: string | string[];
 };
 
 /**
@@ -75,14 +83,35 @@ export const NAV_LINKS: NavLink[] = [
     icon: ScrollText,
     permission: 'audit.read',
   },
+  // Evaluación va después de Curaduría, Administración y Auditoría: la usan la
+  // curadora y la auditora, pero ninguna de las dos empieza su trabajo aquí, y
+  // `firstAllowedHref` toma el primer enlace visible.
+  {
+    href: '/evaluacion',
+    label: 'Evaluación',
+    icon: FlaskConical,
+    permission: ['source.review', 'audit.read'],
+  },
   // Privacidad va última y sin permiso a propósito: es un derecho de toda
   // cuenta, y así queda como refugio de un rol sin ninguna función.
   { href: '/privacidad', label: 'Privacidad', icon: ShieldCheck },
 ];
 
+/** Basta con tener uno de los permisos declarados. */
+export function opensLink(
+  link: NavLink,
+  has: (permission: string) => boolean,
+): boolean {
+  if (!link.permission) return true;
+  const required = Array.isArray(link.permission)
+    ? link.permission
+    : [link.permission];
+  return required.some(has);
+}
+
 /** Filtrado puro, para poder probarlo sin montar componentes. */
 export function visibleLinks(has: (permission: string) => boolean): NavLink[] {
-  return NAV_LINKS.filter((link) => !link.permission || has(link.permission));
+  return NAV_LINKS.filter((link) => opensLink(link, has));
 }
 
 /**

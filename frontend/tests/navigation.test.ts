@@ -82,3 +82,36 @@ describe('primera pantalla tras ingresar', () => {
     expect(firstAllowedHref(sin)).toBe('/privacidad');
   });
 });
+
+describe('un enlace que abren varios permisos', () => {
+  it('evaluación la abren la curaduría y la auditoría', () => {
+    const evaluacion = NAV_LINKS.find((link) => link.href === '/evaluacion');
+    expect(evaluacion?.permission).toEqual(['source.review', 'audit.read']);
+  });
+
+  it('la ve quien tiene cualquiera de los dos', () => {
+    for (const permiso of ['source.review', 'audit.read']) {
+      const rutas = visibleLinks(con([permiso])).map((link) => link.href);
+      expect(rutas).toContain('/evaluacion');
+    }
+  });
+
+  it('no la ve la emprendedora', () => {
+    const rutas = visibleLinks(EMPRENDEDORA).map((link) => link.href);
+    expect(rutas).not.toContain('/evaluacion');
+  });
+
+  it('sin ningún permiso solo queda privacidad', () => {
+    expect(visibleLinks(sin).map((link) => link.href)).toEqual(['/privacidad']);
+  });
+});
+
+describe('dónde aterriza cada rol', () => {
+  it('evaluación no le roba la primera pantalla a nadie', () => {
+    expect(firstAllowedHref(con(['source.review']))).toBe('/curaduria');
+    expect(firstAllowedHref(con(['audit.read']))).toBe('/auditoria');
+    expect(firstAllowedHref(con(['account.suspend', 'audit.read']))).toBe(
+      '/administracion',
+    );
+  });
+});

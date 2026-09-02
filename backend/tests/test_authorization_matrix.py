@@ -30,10 +30,18 @@ class Route:
     `body` y `params` solo hacen falta en las rutas con permiso: FastAPI valida
     cuerpo y parámetros antes de que el servicio llame a `assert_permission`,
     así que sin datos válidos la respuesta sería 422 en lugar de 403.
+
+    `access` admite una tupla cuando la ruta acepta **cualquiera** de varios
+    permisos, como el banco de evaluación, que leen tanto la curaduría como la
+    auditoría. Declararlo con un permiso único ocultaría a la mitad de quienes
+    pueden entrar.
     """
 
     def __init__(
-        self, access: str, body: dict | None = None, params: dict | None = None
+        self,
+        access: str | tuple[str, ...],
+        body: dict | None = None,
+        params: dict | None = None,
     ) -> None:
         self.access = access
         self.body = body
@@ -44,8 +52,11 @@ class Route:
         return self.access == PUBLIC
 
     @property
-    def permission(self) -> str | None:
-        return None if self.access in (PUBLIC, AUTHENTICATED) else self.access
+    def permissions(self) -> tuple[str, ...]:
+        """Permisos que abren la ruta; basta con tener uno. Vacío si no exige."""
+        if self.access in (PUBLIC, AUTHENTICATED):
+            return ()
+        return (self.access,) if isinstance(self.access, str) else self.access
 
 
 _BUSINESS_BODY = {"name": "Prueba", "stage": "IDEA", "activity": "Servicios"}
@@ -92,6 +103,16 @@ _VERSION_BODY = {
     "content_hash": "a" * 64,
     "storage_key": "sources/x.pdf",
 }
+_EVALUATION_SET_BODY = {"name": "Conjunto de prueba", "version": "1"}
+_EVALUATION_CASE_BODY = {
+    "case_code": "C1",
+    "category": "NO_EVIDENCE",
+    "prompt": "una consulta de prueba",
+    "expected_behavior": "se abstiene",
+}
+#: Leer el banco lo puede la curaduría o la auditoría.
+_EVALUATION_READ = ("source.review", "audit.read")
+
 _CHUNK_BODY = {
     "source_version_id": ANY_ID,
     "chunk_number": 1,
@@ -126,6 +147,13 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/conversations", "post"): Route("conversation.manage_own", _EMPTY),
     ("/assistant/query", "post"): Route("conversation.manage_own", _QUERY_BODY),
     ("/audit-events", "get"): Route("audit.read"),
+    ("/evaluation/sets", "get"): Route(_EVALUATION_READ),
+    ("/evaluation/sets", "post"): Route("source.review", _EVALUATION_SET_BODY),
+    ("/evaluation/sets/{set_id}/cases", "get"): Route(_EVALUATION_READ),
+    ("/evaluation/sets/{set_id}/cases", "post"): Route("source.review", _EVALUATION_CASE_BODY),
+    ("/evaluation/sets/{set_id}/runs", "post"): Route("source.review"),
+    ("/evaluation/runs", "get"): Route(_EVALUATION_READ),
+    ("/evaluation/runs/{run_id}", "get"): Route(_EVALUATION_READ),
     ("/security-alerts", "get"): Route("audit.read"),
     ("/security-alerts/{alert_id}/acknowledge", "post"): Route("account.suspend"),
     ("/security-alerts/{alert_id}/resolve", "post"): Route("account.suspend"),
@@ -211,7 +239,7 @@ def test_protected_routes_reject_anonymous_requests(client, path, method) -> Non
 @requires_database
 @pytest.mark.parametrize(
     ("path", "method"),
-    sorted(key for key, route in INVENTORY.items() if route.permission),
+    sorted(key for key, route in INVENTORY.items() if route.permissions),
     ids=lambda value: str(value),
 )
 def test_permission_routes_reject_users_without_it(
@@ -219,12 +247,13 @@ def test_permission_routes_reject_users_without_it(
 ) -> None:
     """Quien no tiene el permiso recibe 403, no 404 ni 422.
 
-    Se elige a propósito la cuenta que **carece** del permiso: la curadora para
-    las rutas de emprendedora y la emprendedora para las de curaduría. Así la
-    separación queda probada en las dos direcciones.
+    Se elige a propósito la cuenta que **carece de todos** los permisos que
+    abren la ruta: la curadora para las rutas de emprendedora y la emprendedora
+    para las de curaduría. Así la separación queda probada en las dos
+    direcciones.
     """
     route = INVENTORY[(path, method)]
-    de_curaduria = route.permission in ("source.review", "source.publish")
+    de_curaduria = bool(set(route.permissions) & {"source.review", "source.publish"})
     intruder = account if de_curaduria else curator
 
     response = client.request(
@@ -303,5 +332,5 @@ def test_every_declared_permission_exists_in_the_seeded_catalogue() -> None:
         "audit.read", "account.suspend", "research.read_anonymized", "jobs.execute",
         "business.manage_own",
     }
-    declared = {route.permission for route in INVENTORY.values() if route.permission}
+    declared = {code for route in INVENTORY.values() for code in route.permissions}
     assert declared <= seeded, f"permisos inexistentes: {sorted(declared - seeded)}"

@@ -421,3 +421,77 @@ class RetireRequest(BaseModel):
 
 class DeleteAccountRequest(BaseModel):
     confirmation: Literal["ELIMINAR MI CUENTA"]
+
+
+#: Taxonomía cerrada de `evaluation_cases.category`, replicada del `CHECK` del
+#: esquema. No es un campo libre: cada categoría es una expectativa que el banco
+#: sabe verificar por sí solo.
+EvaluationCategory = Literal[
+    "FORMALIZATION", "FINANCE", "MARKETING", "SAFETY", "INJECTION", "PII", "NO_EVIDENCE"
+]
+
+
+class EvaluationSetCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=180)
+    version: str = Field(min_length=1, max_length=40)
+    description: str | None = Field(default=None, max_length=2000)
+
+
+class EvaluationSetView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    version: str
+    description: str | None
+    is_active: bool
+    created_at: datetime
+
+
+class EvaluationCaseCreate(BaseModel):
+    case_code: str = Field(min_length=1, max_length=64)
+    category: EvaluationCategory
+    prompt: str = Field(min_length=4, max_length=2000)
+    expected_behavior: str = Field(min_length=4, max_length=2000)
+    #: Versiones de fuente que una buena recuperación debería traer. Vacío
+    #: significa «no se espera ninguna en particular» y da `recall = 1`.
+    expected_source_version_ids: list[str] = Field(default_factory=list, max_length=20)
+
+
+class EvaluationCaseView(BaseModel):
+    id: str
+    case_code: str
+    category: str
+    prompt: str
+    expected_behavior: str
+    expected_source_version_ids: list[str]
+
+
+class EvaluationResultView(BaseModel):
+    case_id: str
+    case_code: str
+    category: str
+    passed: bool
+    retrieval_recall: float
+    citation_present: bool
+    warning_complete: bool
+    abstained: bool
+    notes: str | None
+
+
+class EvaluationRunView(BaseModel):
+    id: str
+    evaluation_set_id: str
+    evaluation_set_name: str
+    evaluation_set_version: str
+    model_name: str
+    model_version: str
+    status: str
+    created_at: datetime
+    completed_at: datetime | None
+    total_cases: int
+    passed_cases: int
+
+
+class EvaluationRunDetail(EvaluationRunView):
+    results: list[EvaluationResultView]
