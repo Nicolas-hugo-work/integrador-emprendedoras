@@ -98,12 +98,15 @@ version es que ahora se puede afirmar cual es.
 
 ### Pruebas
 
-- Backend 265 -> 302; frontend 35 -> 50. Ninguna omitida.
+- Backend 265 -> 303; frontend 35 -> 50. Ninguna omitida.
 - Las pruebas RAG dejan de consultar con palabras corrientes. La base de prueba
   se conserva entre ejecuciones, asi que una consulta con «sobre» acababa
   recuperando el documento de otra prueba.
 - El inventario de autorizacion admite rutas que abre cualquiera de varios
   permisos, y elige como intrusa a quien carece de **todos**.
+- Un caso cuyo enunciado no se puede descifrar dice cual es y que la clave no
+  corresponde, en vez de tumbar la tanda con un 500 mudo. No se anota como
+  fallido: confundiria «respondio mal» con «no pudimos leer la pregunta».
 
 ## [0.6.0] - 2026-09-02
 

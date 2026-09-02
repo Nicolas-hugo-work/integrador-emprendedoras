@@ -17,6 +17,7 @@ usuarias, pero sin su escritura.
 
 from decimal import Decimal
 
+from cryptography.fernet import InvalidToken
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -28,7 +29,7 @@ from app.api_contracts import (
     EvaluationSetView,
 )
 from app.core.clock import utc_now
-from app.core.exceptions import Conflict, Invalid, NotFound
+from app.core.exceptions import Conflict, Invalid, NotFound, Unavailable
 from app.models.admin_research import (
     EvaluationCase,
     EvaluationResult,
@@ -134,6 +135,26 @@ def create_case(db: Session, user: User, set_id: str, payload) -> dict[str, str]
     return {"id": caso.id}
 
 
+def _prompt_of(caso: EvaluationCase) -> str:
+    """Descifra el enunciado, o dice con claridad por qué no pudo.
+
+    Un enunciado ilegible casi siempre significa que `CONTENT_ENCRYPTION_KEY` no
+    es la que cifró el caso —una clave rotada, un volcado traído de otro
+    entorno—. Sin este mensaje la tanda muere con un 500 mudo a mitad de camino.
+
+    No se registra el caso como fallido: eso confundiría «el asistente respondió
+    mal» con «no pudimos leer la pregunta», y arruinaría la medición justo donde
+    tiene que ser fiable.
+    """
+    try:
+        return decrypt_text(caso.prompt_encrypted)
+    except InvalidToken:
+        raise Unavailable(
+            f"No se pudo descifrar el enunciado del caso «{caso.case_code}». "
+            "Probablemente CONTENT_ENCRYPTION_KEY no es la que lo cifró."
+        ) from None
+
+
 def _expected_versions(caso: EvaluationCase) -> list[str]:
     return list((caso.expected_source_ids or {}).get("source_version_ids") or [])
 
@@ -143,7 +164,7 @@ def _to_case_view(caso: EvaluationCase) -> EvaluationCaseView:
         id=caso.id,
         case_code=caso.case_code,
         category=caso.category,
-        prompt=decrypt_text(caso.prompt_encrypted),
+        prompt=_prompt_of(caso),
         expected_behavior=caso.expected_behavior,
         expected_source_version_ids=_expected_versions(caso),
     )
@@ -253,7 +274,7 @@ def run_evaluation(db: Session, user: User, set_id: str) -> EvaluationRunDetail:
 
     resultados: list[EvaluationResult] = []
     for caso in casos:
-        answered = assistant_service.evaluate_message(db, decrypt_text(caso.prompt_encrypted))
+        answered = assistant_service.evaluate_message(db, _prompt_of(caso))
         resultado = _judge(caso, answered)
         resultado.evaluation_run_id = corrida.id
         db.add(resultado)

@@ -430,3 +430,36 @@ def test_the_run_is_recorded_in_the_audit_trail(
     )
     assert eventos.status_code == 200, eventos.text
     assert any(row["object_id"] == run_id for row in eventos.json())
+
+
+def test_an_unreadable_case_says_so_instead_of_crashing(
+    client, curator, add_case, evaluation_set
+) -> None:
+    """Una clave que no corresponde no debe morir con un 500 mudo.
+
+    Pasa de verdad: una clave rotada, o un volcado traído de otro entorno. El
+    caso tampoco se anota como fallido, que confundiría «respondió mal» con «no
+    pudimos leer la pregunta».
+    """
+    from sqlalchemy import update
+
+    from app.database import SessionLocal
+    from app.models.admin_research import EvaluationCase
+
+    case_id = add_case("NO_EVIDENCE", f"que es {_unique_term()}", case_code="ILEGIBLE")
+    with SessionLocal() as db:
+        db.execute(
+            update(EvaluationCase)
+            .where(EvaluationCase.id == case_id)
+            .values(prompt_encrypted="gAAAAABo-cifrado-con-otra-clave")
+        )
+        db.commit()
+
+    for response in (
+        client.get(f"/evaluation/sets/{evaluation_set}/cases", headers=curator.headers),
+        client.post(f"/evaluation/sets/{evaluation_set}/runs", headers=curator.headers),
+    ):
+        assert response.status_code == 500, response.text
+        detalle = response.json()["detail"]
+        assert "ILEGIBLE" in detalle
+        assert "CONTENT_ENCRYPTION_KEY" in detalle
