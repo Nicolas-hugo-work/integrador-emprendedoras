@@ -21,6 +21,27 @@ def assert_permission(db: Session, user: User, permission_code: str) -> None:
         raise Forbidden("Permiso insuficiente")
 
 
+def assert_any_permission(db: Session, user: User, *permission_codes: str) -> None:
+    """Exige **al menos uno** de los permisos indicados.
+
+    Existe porque leer el banco de evaluación lo puede la curadora —que lo
+    ejecuta— o la auditora —que lo revisa sin poder tocarlo—, y hasta ahora toda
+    autorización se expresaba con un permiso único. Recorre el mismo camino de
+    joins que `assert_permission`, en una sola consulta.
+    """
+    if not permission_codes:
+        raise ValueError("assert_any_permission necesita al menos un permiso")
+    allowed = db.scalar(
+        select(func.count())
+        .select_from(UserRole)
+        .join(RolePermission, RolePermission.role_id == UserRole.role_id)
+        .join(Permission, Permission.id == RolePermission.permission_id)
+        .where(UserRole.user_id == user.id, Permission.code.in_(permission_codes))
+    )
+    if not allowed:
+        raise Forbidden("Permiso insuficiente")
+
+
 def owned_business(db: Session, user: User, business_id: str) -> Business:
     """Devuelve el emprendimiento solo si pertenece a la usuaria.
 

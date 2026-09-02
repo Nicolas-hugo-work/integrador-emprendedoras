@@ -1,16 +1,22 @@
 """Conversaciones, consulta al asistente RAG y retroalimentación.
 
-La recuperación queda **congelada** tal como estaba en `v0.1.0`: coincidencias
-`LIKE` sobre fragmentos de fuentes publicadas. El esquema vectorial
-(`source_chunk_embeddings`, `VECTOR(768)`, `idx_chunk_embedding`) existe pero
-está dormido a propósito; la búsqueda híbrida es trabajo de v0.3.0.
+Desde `v0.7.0` la recuperación usa el índice `FULLTEXT` que existía sin usarse
+desde `0001`, en lugar de las coincidencias `LIKE` de `v0.1.0`. El cambio se
+mide con el banco de evaluación (`evaluation_service`), que es lo que permite
+afirmar que mejoró en vez de suponerlo.
+
+El esquema vectorial (`source_chunk_embeddings`, `VECTOR(768)`,
+`idx_chunk_embedding`) sigue dormido a propósito: es la mejora siguiente, y
+ahora será medible.
 """
 
 import hashlib
 import re
+from dataclasses import dataclass
 from uuid import uuid4
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.mysql import match
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -22,6 +28,12 @@ from app.models.identity import User
 from app.models.rag import Source, SourceChunk, SourcePublisher, SourceVersion
 from app.security import decrypt_text, encrypt_text
 from app.services.authorization import assert_permission, owned_business
+
+#: Identidad de la implementación que produce las respuestas. El banco de
+#: evaluación etiqueta sus corridas con estos mismos valores, para que una
+#: corrida quede atribuida a la recuperación que la produjo.
+MODEL_NAME = "retrieval-only-mvp"
+MODEL_VERSION = "v2"
 
 NORMATIVE_TERMS = {
     "nit", "impuesto", "tributario", "tributaria", "seprec", "formalización",
@@ -77,6 +89,38 @@ def list_conversations(db: Session, user: User) -> list[ConversationView]:
     return [_to_view(row) for row in rows]
 
 
+@dataclass(frozen=True)
+class Answered:
+    """Lo que el asistente responde, antes de guardarse en ningún lado."""
+
+    answer: str
+    warning: str | None
+    abstained: bool
+    evidence: list
+
+
+def evaluate_message(db: Session, message: str) -> Answered:
+    """Calcula la respuesta a un mensaje **sin persistir nada**.
+
+    Es el camino que atiende a las usuarias y también el que mide el banco de
+    evaluación. Que sea el mismo, y no una copia, es la condición para que la
+    medición signifique algo: una copia divergiría en silencio.
+
+    No escribe conversaciones, mensajes ni `AIRun`: evaluar no debe ensuciar las
+    conversaciones de nadie.
+    """
+    normative, terms = _classify(message)
+    evidence = _retrieve_published(db, terms)
+    answer, warning, abstained = _compose(evidence, normative)
+    validate_normative_response(
+        is_normative=normative,
+        abstained=abstained,
+        citation_count=len(evidence),
+        warning=warning,
+    )
+    return Answered(answer=answer, warning=warning, abstained=abstained, evidence=evidence)
+
+
 def answer_query(db: Session, user: User, payload) -> AssistantQueryResponse:
     """Responde una consulta con evidencia citada o se abstiene.
 
@@ -101,14 +145,12 @@ def _answer_query_once(db: Session, user: User, payload) -> AssistantQueryRespon
     next_sequence = _next_sequence(db, conversation)
     _persist_user_message(db, conversation, payload.message, next_sequence)
 
-    normative, terms = _classify(payload.message)
-    evidence = _retrieve_published(db, terms)
-    answer, warning, abstained = _compose(evidence, normative)
-    validate_normative_response(
-        is_normative=normative,
-        abstained=abstained,
-        citation_count=len(evidence),
-        warning=warning,
+    respuesta = evaluate_message(db, payload.message)
+    answer, warning, abstained, evidence = (
+        respuesta.answer,
+        respuesta.warning,
+        respuesta.abstained,
+        respuesta.evidence,
     )
 
     assistant_message = Message(
@@ -127,8 +169,8 @@ def _answer_query_once(db: Session, user: User, payload) -> AssistantQueryRespon
         AIRun(
             assistant_message_id=assistant_message.id,
             trace_id=trace_id,
-            model_name="retrieval-only-mvp",
-            model_version="v1",
+            model_name=MODEL_NAME,
+            model_version=MODEL_VERSION,
             prompt_policy_version="safe-rag-v1",
             response_status="ABSTAINED" if abstained else "COMPLETED",
             abstained=abstained,
@@ -190,25 +232,62 @@ def _persist_user_message(db: Session, conversation: Conversation, message: str,
     )
 
 
+#: Cuántos términos se llevan a la consulta. El resto de la frase no aporta y
+#: alargaría el `AGAINST` sin cambiar el orden.
+MAX_TERMS = 8
+
+#: Fragmentos que se citan como mucho.
+MAX_EVIDENCE = 3
+
+
 def _classify(message: str) -> tuple[bool, list[str]]:
-    """Extrae los términos de búsqueda y detecta si la consulta es normativa."""
+    """Extrae los términos de búsqueda y detecta si la consulta es normativa.
+
+    El umbral de cuatro letras es deliberado y coincide con el mínimo del índice:
+    `innodb_ft_min_token_size` vale 3, de modo que ninguna palabra que llegue a
+    la consulta queda fuera del índice.
+
+    Devuelve los términos **ordenados**: cuando la consulta trae más de
+    `MAX_TERMS`, un conjunto sin orden elegiría un subconjunto distinto en cada
+    ejecución y la misma pregunta daría respuestas distintas.
+    """
     terms = {term for term in re.findall(r"[a-záéíóúñ]+", message.casefold()) if len(term) >= 4}
-    return bool(terms & NORMATIVE_TERMS), list(terms)
+    return bool(terms & NORMATIVE_TERMS), sorted(terms)
 
 
 def _retrieve_published(db: Session, terms: list[str]) -> list:
-    """Recupera hasta tres fragmentos de fuentes y versiones publicadas."""
+    """Recupera los fragmentos más relevantes de fuentes y versiones publicadas.
+
+    Usa el índice `idx_source_chunks_fulltext`, creado en `0001` y hasta ahora
+    sin uso. Frente al `LIKE '%término%'` anterior aporta tres cosas: ordena por
+    relevancia en vez de tomar lo primero que devuelva la base, coincide por
+    palabra completa y no por subcadena, y descarta las palabras vacías.
+
+    Una consulta sin términos utilizables no recupera nada, y el asistente se
+    abstiene. Antes devolvía tres fragmentos cualesquiera, que es peor: citar
+    algo que no viene al caso es más engañoso que decir que no se sabe.
+    """
+    if not terms:
+        return []
+    relevancia = match(
+        SourceChunk.heading,
+        SourceChunk.content,
+        against=" ".join(terms[:MAX_TERMS]),
+        in_natural_language_mode=True,
+    )
     query = (
         select(SourceChunk, SourceVersion, Source, SourcePublisher)
         .join(SourceVersion, SourceVersion.id == SourceChunk.source_version_id)
         .join(Source, Source.id == SourceVersion.source_id)
         .join(SourcePublisher, SourcePublisher.id == Source.publisher_id)
-        .where(SourceVersion.status == "PUBLISHED", Source.status == "PUBLISHED")
-        .limit(3)
+        .where(
+            SourceVersion.status == "PUBLISHED",
+            Source.status == "PUBLISHED",
+            relevancia > 0,
+        )
+        .order_by(relevancia.desc())
+        .limit(MAX_EVIDENCE)
     )
-    conditions = [SourceChunk.content.like(f"%{term}%") for term in terms[:8]]
-    if conditions:
-        query = query.where(or_(*conditions))
     return db.execute(query).all()
 
 

@@ -51,6 +51,13 @@ APPROVED_NEW_OPERATIONS = {
     ("/accounts/{user_id}/suspend", "post"): "Suspender una cuenta",
     ("/accounts/{user_id}/reactivate", "post"): "Reactivar una cuenta suspendida",
     ("/source-versions/{version_id}/chunks", "post"): "Carga masiva de fragmentos",
+    ("/evaluation/sets", "get"): "Banco de evaluación: conjuntos de casos",
+    ("/evaluation/sets", "post"): "Banco de evaluación: crear un conjunto",
+    ("/evaluation/sets/{set_id}/cases", "get"): "Banco de evaluación: casos de un conjunto",
+    ("/evaluation/sets/{set_id}/cases", "post"): "Banco de evaluación: añadir un caso",
+    ("/evaluation/sets/{set_id}/runs", "post"): "Ejecutar una tanda de evaluación",
+    ("/evaluation/runs", "get"): "Corridas registradas, para comparar entre sí",
+    ("/evaluation/runs/{run_id}", "get"): "Detalle de una corrida caso por caso",
 }
 
 #: Schemas que cambian respecto de v0.2.0. El cambio debe ser aditivo: se
