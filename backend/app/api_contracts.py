@@ -230,6 +230,28 @@ class ConsentDecision(BaseModel):
     decision: Literal["GRANTED", "WITHDRAWN"]
 
 
+class AuditEventView(BaseModel):
+    """Evento de auditoría tal como lo ve el personal.
+
+    **Nunca incluye `actor_user_id`.** La pantalla de privacidad le promete a la
+    usuaria que la auditoría es seudonimizada, así que ni la administradora ni
+    la auditora reciben el identificador real.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    actor_pseudonym: str
+    action: str
+    object_type: str
+    object_id: str | None
+    result: str
+    occurred_at: datetime
+    correlation_id: str
+    #: Permite verificar que el registro no fue alterado.
+    integrity_hash: str
+
+
 class ConsentStatusView(BaseModel):
     """Estado vigente de una finalidad para la usuaria."""
 

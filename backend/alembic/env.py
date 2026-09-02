@@ -1,11 +1,10 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 from app.config import get_settings
 from app.models import Base
-
 
 config = context.config
 config.set_main_option("sqlalchemy.url", get_settings().database_url)
@@ -13,6 +12,17 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
+#: Índices creados con DDL cruda en `0001` que los modelos no declaran. El
+#: `FULLTEXT` no tiene equivalente declarativo cómodo y el `VECTOR INDEX` usa
+#: sintaxis propia de MariaDB (`M=`, `DISTANCE=`) que SQLAlchemy no modela. Sin
+#: excluirlos, `alembic check` propondría eliminarlos en cada ejecución.
+RAW_DDL_INDEXES = frozenset({"idx_source_chunks_fulltext", "idx_chunk_embedding"})
+
+
+def include_object(obj, name, type_, reflected, compare_to) -> bool:
+    """Deja fuera de la comparación los objetos que se crean con DDL cruda."""
+    return not (type_ == "index" and name in RAW_DDL_INDEXES)
 
 
 def run_migrations_offline() -> None:
@@ -22,6 +32,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -34,7 +45,12 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            include_object=include_object,
+        )
         with context.begin_transaction():
             context.run_migrations()
 

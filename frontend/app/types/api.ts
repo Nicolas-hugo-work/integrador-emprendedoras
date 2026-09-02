@@ -152,3 +152,16 @@ export type SourceChunk = {
   page_number?: number | null;
   token_count: number;
 };
+
+export type AuditEvent = {
+  id: string;
+  /** Nunca llega el identificador real de quien actuó. */
+  actor_pseudonym: string;
+  action: string;
+  object_type: string;
+  object_id?: string | null;
+  result: 'SUCCESS' | 'DENIED' | 'FAILED';
+  occurred_at: string;
+  correlation_id: string;
+  integrity_hash: string;
+};

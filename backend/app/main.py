@@ -14,16 +14,26 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.core.exceptions import AppError
-from app.routers import account, assistant, auth, businesses, finance, privacy, sources, system
+from app.routers import (
+    account,
+    assistant,
+    audit,
+    auth,
+    businesses,
+    finance,
+    privacy,
+    sources,
+    system,
+)
 
 #: El orden determina el de las rutas en el documento OpenAPI.
-ROUTERS = (system, auth, account, businesses, finance, assistant, privacy, sources)
+ROUTERS = (system, auth, account, businesses, finance, assistant, privacy, sources, audit)
 
 
 def create_app() -> FastAPI:
     """Construye la aplicación con su middleware, errores y routers."""
     settings = get_settings()
-    application = FastAPI(title=settings.app_name, version="0.3.0")
+    application = FastAPI(title=settings.app_name, version="0.4.0")
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,

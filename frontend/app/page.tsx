@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, clearTokens, hasSession } from './lib/api';
-import { useNavLinks } from './lib/navigation';
+import { firstAllowedHref, useNavLinks } from './lib/navigation';
+import { useSession } from './lib/session';
 
 import type { Business, Movement, Summary } from './types/api';
 
@@ -27,6 +28,8 @@ export default function Home() {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navItems = useNavLinks();
+  const { has, loading: cargandoSesion } = useSession();
+  const puedeVerInicio = has('business.manage_own');
   const [businessName, setBusinessName] = useState('tu negocio');
   const [summary, setSummary] = useState<Summary>({
     income: '0',
@@ -38,6 +41,13 @@ export default function Home() {
   useEffect(() => {
     if (!hasSession()) {
       router.replace('/login');
+      return;
+    }
+    if (cargandoSesion) return;
+    // Esta pantalla es contenido de emprendedora: quien no lo sea va a la
+    // primera que sí puede abrir, en vez de pedir datos que le darán 403.
+    if (!puedeVerInicio) {
+      router.replace(firstAllowedHref(has));
       return;
     }
     api<Business[]>('/businesses')
@@ -52,7 +62,7 @@ export default function Home() {
         setMovements(recent.slice(0, 3));
       })
       .catch(() => undefined);
-  }, [router]);
+  }, [router, cargandoSesion, puedeVerInicio, has]);
 
   function logout() {
     clearTokens();

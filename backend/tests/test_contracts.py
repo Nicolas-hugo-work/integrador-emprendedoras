@@ -41,6 +41,8 @@ APPROVED_NEW_OPERATIONS = {
     ("/finance/costs/{cost_id}", "patch"): "Corregir un costo",
     ("/finance/costs/{cost_id}", "delete"): "Borrado lógico de un costo",
     ("/consents", "get"): "Leer el consentimiento vigente por finalidad",
+    ("/audit-events", "get"): "Visor de auditoría para administración e investigación",
+    ("/privacy/export/{request_id}", "get"): "Descarga de la copia de datos",
 }
 
 #: Schemas que cambian respecto de v0.2.0. El cambio debe ser aditivo: se

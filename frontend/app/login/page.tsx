@@ -6,6 +6,8 @@ import { SubmitEvent, useState } from 'react';
 import { Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import { AuthFrame } from '../components/auth-frame';
 import { api, saveTokens, TokenPair } from '../lib/api';
+import { firstAllowedHref } from '../lib/navigation';
+import type { User } from '../types/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +33,10 @@ export default function LoginPage() {
         false,
       );
       saveTokens(tokens);
-      router.push('/');
+      const perfil = await api<User>('/me');
+      router.push(
+        firstAllowedHref((permiso) => perfil.permissions.includes(permiso)),
+      );
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : 'No fue posible ingresar.',

@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from app.api_contracts import ConsentDecision, ConsentStatusView, DeleteAccountRequest
 from app.dependencies import DB, CurrentUser
-from app.services import privacy_service
+from app.services import export_service, privacy_service
 
 router = APIRouter(tags=["privacy"])
 
@@ -29,3 +29,9 @@ def request_account_deletion(
 @router.post("/privacy/export", status_code=202)
 def request_data_export(db: DB, user: CurrentUser) -> dict[str, str]:
     return privacy_service.request_data_export(db, user)
+
+
+@router.get("/privacy/export/{request_id}")
+def download_data_export(request_id: str, db: DB, user: CurrentUser) -> dict:
+    """Descarga la copia de los datos, generada en el momento."""
+    return export_service.download_export(db, user, request_id)

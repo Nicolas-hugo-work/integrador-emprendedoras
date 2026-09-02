@@ -21,7 +21,7 @@ from app.models.conversation import AIRun, Conversation, Message, MessageCitatio
 from app.models.identity import User
 from app.models.rag import Source, SourceChunk, SourcePublisher, SourceVersion
 from app.security import decrypt_text, encrypt_text
-from app.services.authorization import owned_business
+from app.services.authorization import assert_permission, owned_business
 
 NORMATIVE_TERMS = {
     "nit", "impuesto", "tributario", "tributaria", "seprec", "formalización",
@@ -52,6 +52,7 @@ def _to_view(row: Conversation) -> ConversationView:
 
 def create_conversation(db: Session, user: User, payload) -> ConversationView:
     """Abre una conversación, opcionalmente ligada a un emprendimiento."""
+    assert_permission(db, user, "conversation.manage_own")
     if payload.business_id:
         owned_business(db, user, payload.business_id)
     conversation = Conversation(
@@ -67,6 +68,7 @@ def create_conversation(db: Session, user: User, payload) -> ConversationView:
 
 def list_conversations(db: Session, user: User) -> list[ConversationView]:
     """Lista las conversaciones vigentes de la usuaria."""
+    assert_permission(db, user, "conversation.manage_own")
     rows = db.scalars(
         select(Conversation)
         .where(Conversation.user_id == user.id, Conversation.deleted_at.is_(None))
@@ -83,6 +85,7 @@ def answer_query(db: Session, user: User, payload) -> AssistantQueryResponse:
     al calcular `sequence_number`. El reintento cubre cualquier colisión que
     llegue igualmente a la restricción `uq_message_sequence`.
     """
+    assert_permission(db, user, "conversation.manage_own")
     for attempt in (1, 2):
         try:
             return _answer_query_once(db, user, payload)
@@ -252,6 +255,7 @@ def _persist_citations(db: Session, assistant_message: Message, evidence: list) 
 
 def create_feedback(db: Session, user: User, payload) -> dict[str, str]:
     """Registra retroalimentación sobre un mensaje propio del asistente."""
+    assert_permission(db, user, "conversation.manage_own")
     message = db.scalar(
         select(Message)
         .join(Conversation, Conversation.id == Message.conversation_id)

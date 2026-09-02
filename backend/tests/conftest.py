@@ -130,8 +130,14 @@ def account(make_account) -> Account:
 
 @pytest.fixture
 def curator(make_account) -> Account:
-    """Usuaria con el rol CURADORA_RAG (`source.review` y `source.publish`)."""
-    from sqlalchemy import select
+    """Usuaria con **solo** el rol CURADORA_RAG.
+
+    El rol se reemplaza en vez de acumularse, igual que hace
+    `scripts/seed_test_users.py`. Si conservara el `EMPRENDEDORA` que otorga el
+    registro tendría todos los permisos y no serviría para probar que el staff
+    no alcanza las pantallas de emprendedora.
+    """
+    from sqlalchemy import delete, select
 
     from app.database import SessionLocal
     from app.models.identity import Role, UserRole
@@ -140,6 +146,7 @@ def curator(make_account) -> Account:
     with SessionLocal() as db:
         role = db.scalar(select(Role).where(Role.code == "CURADORA_RAG"))
         assert role is not None, "la migración siembra el rol CURADORA_RAG"
+        db.execute(delete(UserRole).where(UserRole.user_id == created.user_id))
         db.add(UserRole(user_id=created.user_id, role_id=role.id))
         db.commit()
     return created
