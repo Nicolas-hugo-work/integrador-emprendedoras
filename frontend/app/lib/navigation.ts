@@ -6,6 +6,7 @@ import {
   Goal,
   LayoutDashboard,
   ScrollText,
+  ShieldAlert,
   ShieldCheck,
   WalletCards,
   type LucideIcon,
@@ -58,6 +59,15 @@ export const NAV_LINKS: NavLink[] = [
     label: 'Curaduría',
     icon: BookOpenCheck,
     permission: 'source.review',
+  },
+  // Administración va antes que Auditoría: la cola de alertas es donde la
+  // administradora trabaja, y la traza es solo lectura. Así cada rol aterriza
+  // en su pantalla principal.
+  {
+    href: '/administracion',
+    label: 'Administración',
+    icon: ShieldAlert,
+    permission: 'account.suspend',
   },
   {
     href: '/auditoria',

@@ -230,6 +230,40 @@ class ConsentDecision(BaseModel):
     decision: Literal["GRANTED", "WITHDRAWN"]
 
 
+class SecurityAlertView(BaseModel):
+    """Alerta de seguridad tal como la ve el personal.
+
+    A diferencia de `AuditEventView`, **sí** expone `user_id`: es el único punto
+    de la API donde se levanta la seudonimización, y es lo que permite que la
+    administradora llegue a una cuenta concreta para actuar. La lectura de la
+    cola queda auditada.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    alert_type: str
+    severity: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    status: Literal["OPEN", "ACKNOWLEDGED", "RESOLVED"]
+    user_id: str | None
+    description: str
+    created_at: datetime
+    resolved_at: datetime | None
+
+
+class AccountView(BaseModel):
+    """Ficha mínima de una cuenta, para administración."""
+
+    id: str
+    status: str
+    roles: list[str]
+    created_at: datetime
+
+
+class SuspendRequest(BaseModel):
+    reason: str = Field(min_length=5, max_length=500)
+
+
 class AuditEventView(BaseModel):
     """Evento de auditoría tal como lo ve el personal.
 

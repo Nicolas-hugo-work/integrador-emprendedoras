@@ -43,6 +43,13 @@ APPROVED_NEW_OPERATIONS = {
     ("/consents", "get"): "Leer el consentimiento vigente por finalidad",
     ("/audit-events", "get"): "Visor de auditoría para administración e investigación",
     ("/privacy/export/{request_id}", "get"): "Descarga de la copia de datos",
+    ("/security-alerts", "get"): "Cola de alertas de seguridad",
+    ("/security-alerts/{alert_id}/acknowledge", "post"): "Tomar una alerta",
+    ("/security-alerts/{alert_id}/resolve", "post"): "Cerrar una alerta",
+    ("/accounts/lookup", "get"): "Buscar una cuenta por contacto completo",
+    ("/accounts/{user_id}", "get"): "Ficha de la cuenta que señala una alerta",
+    ("/accounts/{user_id}/suspend", "post"): "Suspender una cuenta",
+    ("/accounts/{user_id}/reactivate", "post"): "Reactivar una cuenta suspendida",
 }
 
 #: Schemas que cambian respecto de v0.2.0. El cambio debe ser aditivo: se

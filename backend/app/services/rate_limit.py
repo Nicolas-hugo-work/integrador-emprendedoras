@@ -57,17 +57,27 @@ class AttemptLimiter:
             remaining = entry.blocked_until - self._now()
             return max(0, int(remaining) + 1) if remaining > 0 else 0
 
-    def record_failure(self, key: str) -> None:
-        """Anota un intento fallido y actualiza el bloqueo si corresponde."""
+    def record_failure(self, key: str) -> bool:
+        """Anota un intento fallido y actualiza el bloqueo si corresponde.
+
+        Devuelve `True` solo cuando **este** intento provoca el bloqueo, no
+        cuando la clave ya estaba bloqueada. Mientras lo está, `_guard` responde
+        429 antes de llegar aquí, así que la transición ocurre como mucho una
+        vez por ventana: quien consuma el valor puede levantar una alerta sin
+        que se multipliquen solas.
+        """
         now = self._now()
         with self._lock:
             entry = self._entries.setdefault(key, _Attempts())
+            estaba_bloqueada = entry.blocked_until > now
             entry.failures = [t for t in entry.failures if now - t < self.window_seconds]
             entry.failures.append(now)
             excess = len(entry.failures) - self.max_attempts
-            if excess >= 0:
-                penalty = min(self.block_seconds * (2**excess), self.max_block_seconds)
-                entry.blocked_until = now + penalty
+            if excess < 0:
+                return False
+            penalty = min(self.block_seconds * (2**excess), self.max_block_seconds)
+            entry.blocked_until = now + penalty
+            return not estaba_bloqueada
 
     def reset(self, key: str) -> None:
         """Olvida los intentos de una clave tras un acceso correcto."""

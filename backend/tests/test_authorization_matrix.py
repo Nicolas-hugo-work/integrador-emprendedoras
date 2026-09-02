@@ -126,6 +126,17 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/conversations", "post"): Route("conversation.manage_own", _EMPTY),
     ("/assistant/query", "post"): Route("conversation.manage_own", _QUERY_BODY),
     ("/audit-events", "get"): Route("audit.read"),
+    ("/security-alerts", "get"): Route("audit.read"),
+    ("/security-alerts/{alert_id}/acknowledge", "post"): Route("account.suspend"),
+    ("/security-alerts/{alert_id}/resolve", "post"): Route("account.suspend"),
+    ("/accounts/lookup", "get"): Route(
+        "account.suspend", params={"contact": "nadie@ejemplo.test"}
+    ),
+    ("/accounts/{user_id}", "get"): Route("account.suspend"),
+    ("/accounts/{user_id}/suspend", "post"): Route(
+        "account.suspend", {"reason": "Motivo de prueba"}
+    ),
+    ("/accounts/{user_id}/reactivate", "post"): Route("account.suspend"),
     ("/feedback", "post"): Route("conversation.manage_own", _FEEDBACK_BODY),
     ("/consents", "get"): Route(AUTHENTICATED),
     ("/consents", "post"): Route(AUTHENTICATED),
