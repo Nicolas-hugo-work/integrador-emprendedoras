@@ -44,6 +44,12 @@ def lookup_account(db: DB, user: CurrentUser, contact: str) -> AccountView:
     return account_service.lookup_account(db, user, contact)
 
 
+@router.get("/accounts/{user_id}", response_model=AccountView)
+def read_account(user_id: str, db: DB, user: CurrentUser) -> AccountView:
+    """Ficha de la cuenta a la que apunta una alerta."""
+    return account_service.read_account(db, user, user_id)
+
+
 @router.post("/accounts/{user_id}/suspend", response_model=AccountView)
 def suspend_account(
     user_id: str, payload: SuspendRequest, db: DB, user: CurrentUser

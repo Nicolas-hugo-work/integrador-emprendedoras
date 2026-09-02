@@ -6,6 +6,50 @@ Este proyecto utiliza [versionado semántico](https://semver.org/lang/es/):
 - `MINOR` (`0.2.0`): nuevas funciones compatibles.
 - `MAJOR` (`1.0.0`): versión estable o cambios incompatibles.
 
+## [0.5.0] - 2026-09-01
+
+`ADMINISTRADORA` deja de tener una sola pantalla de solo lectura:
+`account.suspend` pasa a ser un permiso con endpoints. La API va de 41 a 48
+operaciones, sin cambios de esquema y sin migracion.
+
+### El bloqueo por intentos deja rastro
+
+- El limitador que introdujo `0.2.0` bloqueaba una cuenta en memoria y nadie se
+  enteraba. Ahora escribe en `security_alerts`, tabla que existia desde el
+  esquema inicial sin usarse.
+- La alerta se crea **en la transicion** al bloqueo: cinco fallos generan una
+  alerta, no cinco. Tampoco se duplica mientras siga abierta.
+- La descripcion nunca lleva el contacto probado ni la contrasena. Un intento
+  contra un contacto inexistente tambien deja alerta, con `user_id` nulo.
+
+### Cola de alertas y acciones sobre cuentas
+
+- `GET /security-alerts` exige `audit.read`: la auditora ve la cola igual que
+  la administradora, pero recibe `403` al resolver o suspender. Leer es de
+  auditoria; actuar, de administracion.
+- `POST /security-alerts/{id}/acknowledge` y `/resolve`.
+- `GET /accounts/lookup` busca por contacto **completo**: sin comodines, sin
+  listados, y deja evento de auditoria con quien busco a quien.
+- `GET /accounts/{id}` para llegar desde una alerta al estado y los roles.
+- `POST /accounts/{id}/suspend` y `/reactivate`.
+
+### Decisiones que conviene conocer
+
+- `SecurityAlertView` **si** expone `user_id`, a diferencia del visor de
+  auditoria. Es el unico punto donde se levanta la seudonimizacion, porque sin
+  el no habria forma de llegar a una cuenta; la lectura de la cola se audita.
+- Suspender revoca todas las sesiones y corta el acceso de inmediato.
+- No se puede suspender la cuenta propia ni otra que tenga `account.suspend`:
+  nadie puede dejar el sistema sin administracion.
+- Solo se reactiva desde `SUSPENDED`; una cuenta eliminada no vuelve por esta
+  via porque su purga ya esta programada.
+- El motivo de una suspension queda en `metadata_json` del evento de
+  auditoria, columna que existia sin uso, y entra en su hash de integridad.
+
+### Sin cambios de esquema
+
+Las 62 tablas, indices, vista y triggers siguen identicos a los de `0.1.0`.
+
 ## [0.4.0] - 2026-09-01
 
 Los roles dejan de ser decorativos: cada uno accede solo a sus funciones. La

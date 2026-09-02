@@ -62,6 +62,24 @@ def lookup_account(db: Session, user: User, contact: str) -> AccountView:
     return _view(db, target)
 
 
+def read_account(db: Session, user: User, target_id: str) -> AccountView:
+    """Ficha de una cuenta por su identificador.
+
+    Es lo que permite ir desde una alerta —que sí lleva `user_id`— hasta el
+    estado y los roles de la cuenta antes de decidir si se suspende. Queda
+    auditada igual que la búsqueda por contacto.
+    """
+    assert_permission(db, user, "account.suspend")
+    target = db.get(User, target_id)
+    if target is None:
+        raise NotFound("Cuenta no encontrada")
+    write_audit(
+        db, actor=user, action="account.read", object_type="user", object_id=target.id
+    )
+    db.commit()
+    return _view(db, target)
+
+
 def _target_for_admin_action(db: Session, user: User, target_id: str) -> User:
     assert_permission(db, user, "account.suspend")
     if target_id == user.id:

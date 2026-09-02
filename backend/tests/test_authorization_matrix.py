@@ -132,6 +132,7 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/accounts/lookup", "get"): Route(
         "account.suspend", params={"contact": "nadie@ejemplo.test"}
     ),
+    ("/accounts/{user_id}", "get"): Route("account.suspend"),
     ("/accounts/{user_id}/suspend", "post"): Route(
         "account.suspend", {"reason": "Motivo de prueba"}
     ),

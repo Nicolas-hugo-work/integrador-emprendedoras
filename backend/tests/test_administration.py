@@ -307,6 +307,41 @@ def test_lookup_requires_the_full_contact(client, account, administrator) -> Non
     assert inexistente.json() == parcial.json()
 
 
+def test_the_account_behind_an_alert_can_be_read(
+    client, account, administrator
+) -> None:
+    """Desde la alerta se llega al estado y los roles antes de decidir."""
+    _fallar_login(client, account.contact, 5)
+    alerta = next(
+        a for a in _alertas_de(client, administrator) if a["user_id"] == account.user_id
+    )
+
+    ficha = client.get(f"/accounts/{alerta['user_id']}", headers=administrator.headers)
+    assert ficha.status_code == 200
+    assert ficha.json()["id"] == account.user_id
+    assert ficha.json()["status"] == "ACTIVE"
+    assert ficha.json()["roles"] == ["EMPRENDEDORA"]
+
+    assert client.get(
+        f"/accounts/{uuid.uuid4()}", headers=administrator.headers
+    ).status_code == 404
+
+
+def test_lookup_is_not_swallowed_by_the_id_route(client, account, administrator) -> None:
+    """`/accounts/lookup` debe declararse antes que `/accounts/{user_id}`.
+
+    Si se invirtiera el orden, FastAPI trataría «lookup» como un identificador y
+    la búsqueda respondería 404 siempre.
+    """
+    respuesta = client.get(
+        "/accounts/lookup",
+        headers=administrator.headers,
+        params={"contact": account.contact},
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.json()["id"] == account.user_id
+
+
 def test_the_lookup_is_audited(client, account, administrator) -> None:
     """Quién buscó a quién queda registrado."""
     from sqlalchemy import select

@@ -165,3 +165,25 @@ export type AuditEvent = {
   correlation_id: string;
   integrity_hash: string;
 };
+
+export type AlertSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type AlertStatus = 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED';
+
+export type SecurityAlert = {
+  id: string;
+  alert_type: string;
+  severity: AlertSeverity;
+  status: AlertStatus;
+  /** A diferencia de la auditoría, aquí sí viaja: es lo que permite actuar. */
+  user_id: string | null;
+  description: string;
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type Account = {
+  id: string;
+  status: string;
+  roles: string[];
+  created_at: string;
+};

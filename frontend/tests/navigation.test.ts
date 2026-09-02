@@ -52,6 +52,16 @@ describe('navegación principal', () => {
     expect(rutas).toContain('/curaduria');
   });
 
+  it('cada rol de staff aterriza en su pantalla principal', () => {
+    const administradora = con(['account.suspend', 'audit.read']);
+    const auditora = con(['audit.read']);
+    expect(firstAllowedHref(administradora)).toBe('/administracion');
+    expect(firstAllowedHref(auditora)).toBe('/auditoria');
+    expect(visibleLinks(auditora).map((l) => l.href)).not.toContain(
+      '/administracion',
+    );
+  });
+
   it('privacidad no exige permiso: es un derecho de toda cuenta', () => {
     const privacidad = NAV_LINKS.find((link) => link.href === '/privacidad');
     expect(privacidad?.permission).toBeUndefined();

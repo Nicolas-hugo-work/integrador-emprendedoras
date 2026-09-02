@@ -47,6 +47,7 @@ APPROVED_NEW_OPERATIONS = {
     ("/security-alerts/{alert_id}/acknowledge", "post"): "Tomar una alerta",
     ("/security-alerts/{alert_id}/resolve", "post"): "Cerrar una alerta",
     ("/accounts/lookup", "get"): "Buscar una cuenta por contacto completo",
+    ("/accounts/{user_id}", "get"): "Ficha de la cuenta que señala una alerta",
     ("/accounts/{user_id}/suspend", "post"): "Suspender una cuenta",
     ("/accounts/{user_id}/reactivate", "post"): "Reactivar una cuenta suspendida",
 }
