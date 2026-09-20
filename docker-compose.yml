@@ -37,6 +37,22 @@ services:
       mariadb:
         condition: service_healthy
 
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: development
+      DATABASE_URL: mysql+pymysql://pwa_app:change_me_local@mariadb:3306/pwa_autonomia?charset=utf8mb4
+      CONTENT_ENCRYPTION_KEY: local-development-encryption-key-change-in-production
+      JWT_SECRET: local-development-jwt-secret-change-before-production-2026
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - while true; do python -m app.tasks; sleep 3600; done
+
   frontend:
     build:
       context: ./frontend

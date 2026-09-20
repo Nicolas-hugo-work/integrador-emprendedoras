@@ -1,6 +1,6 @@
 # Kawsay v0.8.0 — Que funcione sin conexión, y que cuando no pueda, lo diga
 
-> **Estado:** propuesto, pendiente de aprobación.
+> **Estado:** entregado en `main` (v0.8.0).
 > **Versión anterior:** v0.7.0 (banco de evaluación y recuperación `FULLTEXT`).
 > **Alcance:** enteramente de cliente. Sin cambios de esquema, sin migración y
 > sin una sola operación nueva en la API.

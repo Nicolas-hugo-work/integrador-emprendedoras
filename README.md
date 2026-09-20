@@ -1,6 +1,6 @@
 # Kawsay — PWA de autonomía económica femenina
 
-**Versión actual:** `v0.8.0`
+**Versión actual:** `v0.8.1`
 
 Aplicación web progresiva para acompañar a emprendedoras bolivianas en el registro de su negocio, el control financiero, la orientación con fuentes verificadas y el ejercicio de sus derechos de privacidad.
 
@@ -12,7 +12,7 @@ No es solamente una base de datos. El proyecto incluye:
 - emprendimientos, movimientos financieros, costos y cálculo de precios;
 - asistente RAG seguro que cita fuentes publicadas o se abstiene;
 - consentimientos versionados, exportación, eliminación programada y auditoría;
-- migraciones Alembic, tareas de purga, pruebas y contenedores Docker.
+- migraciones Alembic, un worker de purga en Compose, pruebas y contenedores Docker.
 
 ## Inicio rápido con Docker
 
@@ -28,7 +28,9 @@ Luego abre:
 
 - aplicación: `http://localhost:3000`
 - documentación interactiva de la API: `http://localhost:8000/docs`
-- comprobación de salud: `http://localhost:8000/health`
+- comprobación de salud: `http://localhost:8000/health` (incluye un ping a MariaDB)
+
+`docker compose ps` debe mostrar cuatro servicios: `mariadb`, `backend`, `worker` y `frontend`. El worker ejecuta cada hora `python -m app.tasks` (sesiones vencidas, audio y cuentas cuyo plazo de borrado ya pasó).
 
 También puedes hacer doble clic secundario y ejecutar con PowerShell [iniciar.ps1](C:/proyecto-integrador/iniciar.ps1). Para detener únicamente los servicios usa [detener.ps1](C:/proyecto-integrador/detener.ps1).
 

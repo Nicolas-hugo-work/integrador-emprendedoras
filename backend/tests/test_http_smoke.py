@@ -14,7 +14,11 @@ pytestmark = requires_database
 def test_health_is_public(client) -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "service": "pwa-autonomia-backend"}
+    assert response.json() == {
+        "status": "ok",
+        "service": "pwa-autonomia-backend",
+        "database": "up",
+    }
 
 
 def test_me_returns_the_authenticated_account(client, account) -> None:

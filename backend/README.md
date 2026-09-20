@@ -1,13 +1,13 @@
 # Backend y base de datos — Kawsay
 
-Backend funcional del MVP para MariaDB 11.8 LTS. Incluye 62 tablas, RBAC, consentimiento versionado, libro financiero simple, conversaciones cifradas, trazabilidad RAG, búsqueda vectorial, auditoría inmutable y datos seudonimizados del piloto.
+Backend funcional del MVP para MariaDB 11.8 LTS. Incluye 62 tablas, RBAC, consentimiento versionado, libro financiero simple, conversaciones cifradas, trazabilidad RAG con recuperación `FULLTEXT` (el índice `VECTOR(768)` está en el esquema y aún no se consulta), auditoría inmutable y datos seudonimizados del piloto.
 
 ## Contenido
 
 - Modelos SQLAlchemy organizados por dominio en `app/models/`.
 - Contratos Pydantic y esqueleto OpenAPI en `app/api_contracts.py` y `app/main.py`.
 - Migración Alembic inicial reversible en `alembic/versions/0001_initial_schema.py`.
-- Índices `BTREE`, `FULLTEXT` y `VECTOR(768)` con distancia coseno.
+- Índices `BTREE` y `FULLTEXT` en uso; `VECTOR(768)` reservado para una recuperación posterior medible.
 - Vista mensual financiera y protección append-only de auditoría.
 - Semillas idempotentes para roles, permisos, consentimientos, categorías y embeddings.
 - Diagrama ER y diccionario resumido en `docs/architecture.md`.
@@ -17,7 +17,7 @@ Backend funcional del MVP para MariaDB 11.8 LTS. Incluye 62 tablas, RBAC, consen
 
 ```powershell
 Copy-Item .env.example .env
-docker compose up -d
+docker compose -f ../docker-compose.yml up -d mariadb
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -e ".[dev]"
 .venv\Scripts\alembic.exe upgrade head
@@ -43,7 +43,7 @@ El archivo generado incluye tablas, restricciones, índices convencionales, índ
 .venv\Scripts\ruff.exe check .
 ```
 
-Para validar contra MariaDB real, ejecutar primero `docker compose up -d` y luego la migración ascendente y descendente en una base de prueba independiente.
+Para validar contra MariaDB real, ejecutar primero `docker compose up -d mariadb` en la raíz del repo y luego la migración ascendente y descendente en una base de prueba independiente.
 
 ## Estado de los endpoints
 

@@ -1,10 +1,13 @@
 # Informe de implementación — Kawsay v0.2.0
 
-**Rama:** `refactor/v0.2.0` · **Pull request:** [#1](https://github.com/Nicolas-hugo-work/integrador-emprendedoras/pull/1)
+> Historia del refactor v0.2.0. El estado vivo del producto está en
+> `CHANGELOG.md` y `VERSION`.
+
+**Rama:** `refactor/v0.2.0` · **Pull request:** [#1](https://github.com/Nicolas-hugo-work/integrador-emprendedoras/pull/1) (fusionado)
 **Base:** `main` (`3ec2663`, etiqueta `v0.1.0`) · **Fecha:** 2026-09-01
 
 Implementación completa del plan acordado en `PLAN_REFACTOR_MVC_v0.2.0.md`.
-Las cinco fases quedaron terminadas. El pull request **no se fusionó** y no se
+Las cinco fases quedaron terminadas. El pull request se fusionó; no se
 reescribió historial remoto.
 
 ---

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     )
     content_encryption_key: str = "replace-with-a-fernet-key"
     jwt_secret: str = "replace-with-at-least-32-random-characters"
-    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     access_token_ttl_minutes: int = Field(default=15, ge=5, le=60)
     refresh_token_ttl_days: int = Field(default=30, ge=1, le=90)
     audio_max_retention_hours: int = Field(default=24, ge=1, le=24)

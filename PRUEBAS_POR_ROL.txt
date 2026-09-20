@@ -1,6 +1,6 @@
 ================================================================================
 KAWSAY - GUIA DE PRUEBAS MANUALES POR ROL
-Version del sistema: v0.8.0
+Version del sistema: v0.8.1
 ================================================================================
 
 Este documento explica que hacer, en que orden, y que deberia pasar en cada
@@ -23,13 +23,14 @@ Abre PowerShell y ejecuta:
     cd C:\proyecto-integrador
     docker compose up -d
 
-Espera a que los tres contenedores esten arriba. Para confirmarlo:
+Espera a que los cuatro contenedores esten arriba. Para confirmarlo:
 
     docker compose ps
 
-Deberias ver "mariadb", "backend" y "frontend". El de mariadb debe decir
-"healthy". Si el backend aparece reiniciandose, espera unos segundos: al
-arrancar aplica las migraciones antes de aceptar peticiones.
+Deberias ver "mariadb", "backend", "worker" y "frontend". El de mariadb debe
+decir "healthy". Si el backend aparece reiniciandose, espera unos segundos: al
+arrancar aplica las migraciones antes de aceptar peticiones. El worker corre
+las purgas de `tasks.py` cada hora; no atiende HTTP.
 
 Direcciones:
     Aplicacion (lo que vas a probar) ....... http://localhost:3000

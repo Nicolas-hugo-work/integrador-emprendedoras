@@ -10,6 +10,7 @@ import {
   CircleDollarSign,
   Goal,
   LoaderCircle,
+  LogOut,
   Menu,
   Plus,
   Sparkles,
@@ -114,7 +115,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <aside
-        className={`${mobileOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-sidebar-border bg-sidebar px-5 py-6 transition-transform lg:translate-x-0`}
+        className={`${mobileOpen ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-72 flex-col border-r border-sidebar-border bg-sidebar px-5 py-6 lg:flex`}
       >
         <Link
           href="/"
@@ -146,14 +147,22 @@ export default function Home() {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto rounded-2xl border border-primary/15 bg-primary/5 p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
-            <BookOpenCheck className="size-4" /> Fuentes verificadas
+        <div className="mt-auto space-y-3">
+          <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
+              <BookOpenCheck className="size-4" /> Fuentes verificadas
+            </div>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Las orientaciones normativas muestran siempre su institución y
+              fecha.
+            </p>
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
-            Las orientaciones normativas muestran siempre su institución y
-            fecha.
-          </p>
+          <button
+            onClick={logout}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+          >
+            <LogOut className="size-5" /> Cerrar sesión
+          </button>
         </div>
       </aside>
 
@@ -172,6 +181,7 @@ export default function Home() {
               className="grid size-10 place-items-center rounded-xl border bg-card lg:hidden"
               onClick={() => setMobileOpen(true)}
               aria-label="Abrir menú"
+              aria-expanded={mobileOpen}
             >
               <Menu className="size-5" />
             </button>
@@ -187,7 +197,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <button
               onClick={logout}
-              className="hidden text-sm font-semibold text-primary sm:block"
+              className="text-sm font-semibold text-primary"
             >
               Cerrar sesión
             </button>

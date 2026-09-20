@@ -30,7 +30,7 @@ export function AppShell({
   return (
     <main className="min-h-screen bg-background">
       <aside
-        className={`${open ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r bg-sidebar p-5 transition-transform lg:translate-x-0`}
+        className={`${open ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-72 flex-col border-r bg-sidebar p-5 lg:flex`}
       >
         <div className="mb-9 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
@@ -86,6 +86,7 @@ export function AppShell({
               onClick={() => setOpen(true)}
               className="grid size-10 place-items-center rounded-xl border bg-card lg:hidden"
               aria-label="Abrir navegación"
+              aria-expanded={open}
             >
               <Menu className="size-5" />
             </button>

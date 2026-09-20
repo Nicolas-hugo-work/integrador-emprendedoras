@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { SubmitEvent, useState } from 'react';
 import { CheckCircle2, LoaderCircle } from 'lucide-react';
 import { AuthFrame } from '../components/auth-frame';
-import { api, saveTokens, TokenPair } from '../lib/api';
+import { api, clearTokens, saveTokens, TokenPair } from '../lib/api';
 import { fieldValue } from '../lib/form';
+import { firstAllowedHref } from '../lib/navigation';
 
-import type { Registration } from '../types/api';
+import type { Registration, User } from '../types/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -55,7 +56,15 @@ export default function RegisterPage() {
         false,
       );
       saveTokens(tokens);
-      router.push('/emprendimiento');
+      try {
+        const perfil = await api<User>('/me');
+        router.push(
+          firstAllowedHref((permiso) => perfil.permissions.includes(permiso)),
+        );
+      } catch (perfil) {
+        clearTokens();
+        throw perfil;
+      }
     } catch (reason) {
       setError(
         reason instanceof Error

@@ -6,6 +6,35 @@ Este proyecto utiliza [versionado semántico](https://semver.org/lang/es/):
 - `MINOR` (`0.2.0`): nuevas funciones compatibles.
 - `MAJOR` (`1.0.0`): versión estable o cambios incompatibles.
 
+## [0.8.1] - 2026-09-20
+
+Deja de afirmar lo que no hacía. Sin funciones nuevas: se cumple lo que ya
+estaba escrito.
+
+### Privacidad
+
+- El servicio `worker` de Compose ejecuta `python -m app.tasks` cada hora.
+  Las purgas de sesiones, audio y cuentas con plazo vencido dejan de ser
+  una función que nadie llamaba.
+
+### Salud
+
+- `/health` hace `SELECT 1`. Si MariaDB no responde, 503. El humo de CI
+  ya no se pone verde con una base caída.
+
+### Interfaz
+
+- En Inicio, «Cerrar sesión» también está en el menú y en pantallas
+  estrechas. El cajón cerrado usa `hidden` para no recibirse con Tab.
+- Si `/me` falla tras el login, se olvidan los tokens. El registro aterriza
+  con `firstAllowedHref`, no siempre en `/emprendimiento`.
+
+### Docs y config
+
+- Contratos, README del backend e `IMPLEMENTATION_REPORT` dejan de
+  contradecir el código. Ya no hay CORS a `:5173` ni un segundo
+  `backend/docker-compose.yml`. Existe `frontend/.env.example`.
+
 ## [0.8.0] - 2026-09-20
 
 Que funcione sin conexion, y que cuando no pueda, lo diga. Enteramente de

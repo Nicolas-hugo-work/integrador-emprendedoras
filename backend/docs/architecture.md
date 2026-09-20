@@ -46,7 +46,7 @@ erDiagram
 
 | Dominio | Tablas | Finalidad y retención |
 |---|---|---|
-| Identidad | `users`, `user_contacts`, `password_credentials`, `auth_challenges`, `sessions` | Cuenta, verificación y sesiones. Los retos vencidos y sesiones revocadas se purgan periódicamente. |
+| Identidad | `users`, `user_contacts`, `password_credentials`, `auth_challenges`, `sessions` | Cuenta, verificación y sesiones. Los retos vencidos y sesiones revocadas los borra el servicio `worker` de Compose (`python -m app.tasks`). |
 | Autorización | `roles`, `permissions`, `role_permissions`, `user_roles` | RBAC extensible. La administradora no recibe permisos sobre contenido privado. |
 | Organizaciones | `organizations`, `organization_memberships` | Preparación técnica para una futura modalidad institucional; sin interfaz en el MVP. |
 | Preferencias | `user_preferences` | Accesibilidad, voz y longitud de respuesta. |
@@ -64,7 +64,7 @@ erDiagram
 ## Reglas de eliminación
 
 1. La eliminación lógica oculta inmediatamente el dato en la aplicación.
-2. Un trabajo de purga elimina datos derivados y objetos externos en un máximo de 30 días.
+2. El servicio `worker` de `docker-compose.yml` ejecuta `python -m app.tasks` cada hora: sesiones vencidas, metadatos de audio y cuentas cuyo `purge_due_at` ya pasó. La eliminación física de una cuenta pedida se completa en un máximo de 30 días.
 3. El audio se elimina al confirmar la transcripción o al alcanzar 24 horas.
 4. Las copias de respaldo expiran a los 30 días.
 5. La auditoría conserva identificadores seudonimizados, nunca texto de conversaciones ni notas financieras.
