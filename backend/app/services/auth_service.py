@@ -2,6 +2,7 @@
 
 import hashlib
 import re
+from dataclasses import dataclass
 from datetime import timedelta
 
 from sqlalchemy import select
@@ -57,8 +58,16 @@ def normalize_contact_for_lookup(contact: str) -> str:
     return _normalize_email(contact) if "@" in contact else _normalize_phone(contact)
 
 
-def issue_tokens(db: OrmSession, user: User) -> TokenPair:
-    """Crea una sesión de refresco y devuelve el par de tokens."""
+@dataclass(frozen=True)
+class IssuedSession:
+    """Acceso en el JSON; el refresco crudo solo viaja en la cookie HttpOnly."""
+
+    tokens: TokenPair
+    refresh_token: str
+
+
+def issue_tokens(db: OrmSession, user: User) -> IssuedSession:
+    """Crea una sesión de refresco. El valor crudo no entra en el JSON."""
     refresh = new_opaque_token()
     db.add(
         Session(
@@ -67,10 +76,12 @@ def issue_tokens(db: OrmSession, user: User) -> TokenPair:
             expires_at=utc_now() + timedelta(days=settings.refresh_token_ttl_days),
         )
     )
-    return TokenPair(
-        access_token=create_access_token(user.id),
+    return IssuedSession(
+        tokens=TokenPair(
+            access_token=create_access_token(user.id),
+            expires_in=settings.access_token_ttl_minutes * 60,
+        ),
         refresh_token=refresh,
-        expires_in=settings.access_token_ttl_minutes * 60,
     )
 
 
@@ -196,7 +207,7 @@ def verify_contact(db: OrmSession, payload, *, client_key: str) -> dict[str, str
     return {"message": "Contacto verificado; la cuenta está activa"}
 
 
-def login(db: OrmSession, payload, *, client_key: str) -> TokenPair:
+def login(db: OrmSession, payload, *, client_key: str) -> IssuedSession:
     """Autentica por contacto verificado y contraseña."""
     normalized = normalize_contact_for_lookup(payload.contact)
     contact_key = f"contact:{normalized}"
@@ -261,11 +272,11 @@ def login(db: OrmSession, payload, *, client_key: str) -> TokenPair:
     return tokens
 
 
-def refresh(db: OrmSession, payload) -> TokenPair:
+def refresh(db: OrmSession, refresh_token: str) -> IssuedSession:
     """Rota la sesión: revoca el token presentado y emite uno nuevo."""
     session = db.scalar(
         select(Session).where(
-            Session.refresh_token_hash == hash_token(payload.refresh_token),
+            Session.refresh_token_hash == hash_token(refresh_token),
             Session.revoked_at.is_(None),
             Session.expires_at > utc_now(),
         )
@@ -281,15 +292,17 @@ def refresh(db: OrmSession, payload) -> TokenPair:
     return tokens
 
 
-def logout(db: OrmSession, payload, user: User) -> dict[str, str]:
+def logout(db: OrmSession, refresh_token: str | None, user: User) -> dict[str, str]:
     """Revoca la sesión indicada por el token de refresco."""
-    session = db.scalar(
-        select(Session).where(
-            Session.user_id == user.id,
-            Session.refresh_token_hash == hash_token(payload.refresh_token),
-            Session.revoked_at.is_(None),
+    session = None
+    if refresh_token:
+        session = db.scalar(
+            select(Session).where(
+                Session.user_id == user.id,
+                Session.refresh_token_hash == hash_token(refresh_token),
+                Session.revoked_at.is_(None),
+            )
         )
-    )
     if session:
         session.revoked_at = utc_now()
     write_audit(db, actor=user, action="auth.logout", object_type="user", object_id=user.id)

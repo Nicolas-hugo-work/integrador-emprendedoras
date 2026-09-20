@@ -58,12 +58,34 @@ APPROVED_NEW_OPERATIONS = {
     ("/evaluation/sets/{set_id}/runs", "post"): "Ejecutar una tanda de evaluación",
     ("/evaluation/runs", "get"): "Corridas registradas, para comparar entre sí",
     ("/evaluation/runs/{run_id}", "get"): "Detalle de una corrida caso por caso",
+    ("/diagnostic-questions", "get"): "v0.11.0: cuestionario de diagnóstico",
+    ("/diagnostic-sessions", "post"): "v0.11.0: abrir un diagnóstico",
+    ("/diagnostic-sessions/{session_id}", "get"): "v0.11.0: leer un diagnóstico",
+    ("/diagnostic-sessions/{session_id}/answers", "put"): "v0.11.0: guardar una respuesta",
+    ("/diagnostic-sessions/{session_id}/complete", "post"): "v0.11.0: cerrar y generar la ruta",
+    ("/formalization-routes", "get"): "v0.11.0: rutas de formalización del negocio",
+    ("/formalization-steps/{step_id}/complete", "post"): "v0.11.0: marcar un paso hecho",
 }
 
 #: Schemas que cambian respecto de v0.2.0. El cambio debe ser aditivo: se
 #: comprueba que ninguna propiedad previa desaparezca ni se altere.
 APPROVED_SCHEMA_CHANGES = {
     "UserView": "v0.3.0 añade roles y permissions para condicionar la interfaz por capacidad",
+    "TokenPair": "v0.9.0: el refresh deja el JSON y pasa a cookie HttpOnly",
+}
+
+#: Operaciones de la línea base cuyo documento OpenAPI cambia a propósito.
+APPROVED_OPERATION_CHANGES = {
+    ("/auth/login", "post"): "v0.9.0: el refresh sale en cookie HttpOnly, no en TokenPair",
+    ("/auth/refresh", "post"): "v0.9.0: el refresh se lee de la cookie; el cuerpo es opcional",
+    ("/auth/logout", "post"): "v0.9.0: el logout lee la cookie; el cuerpo es opcional",
+}
+
+#: Propiedades que un schema puede perder. Solo MINOR documentados.
+APPROVED_SCHEMA_REMOVALS = {
+    "TokenPair": {
+        "refresh_token": "v0.9.0: el valor crudo ya no viaja en JSON",
+    },
 }
 
 
@@ -93,6 +115,9 @@ def test_baseline_operations_are_unchanged(current) -> None:
     """Las operaciones heredadas conservan schemas, códigos y seguridad."""
     baseline, actual = _operations(BASELINE), _operations(current)
     for key, operation in baseline.items():
+        if key in APPROVED_OPERATION_CHANGES:
+            assert key in actual, f"desapareció la operación aprobada {key}"
+            continue
         assert actual[key] == operation, f"cambió la operación {key[1].upper()} {key[0]}"
 
 
@@ -118,7 +143,11 @@ def test_schema_changes_are_declared_and_additive(current) -> None:
         assert name in APPROVED_SCHEMA_CHANGES, f"cambio de schema sin declarar: {name}"
         previous = definition.get("properties", {})
         current_properties = new[name].get("properties", {})
+        removed = APPROVED_SCHEMA_REMOVALS.get(name, {})
         for field, shape in previous.items():
+            if field in removed:
+                assert field not in current_properties, f"{name}.{field} debía desaparecer"
+                continue
             assert field in current_properties, f"{name}.{field} desapareció"
             assert current_properties[field] == shape, f"{name}.{field} cambió de forma"
 

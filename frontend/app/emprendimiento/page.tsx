@@ -17,10 +17,12 @@ import { useOffline } from 'next/offline';
 import { AppShell } from '../components/app-shell';
 import {
   api,
+  apiCached,
   isNetworkError,
   OFFLINE_WRITE_ERROR,
 } from '../lib/api';
 import { fieldValue, optionalFieldValue } from '../lib/form';
+import { describeStaleness } from '../lib/staleness';
 import type { Business } from '../types/api';
 
 function describe(reason: unknown, fallback: string): string {
@@ -32,6 +34,9 @@ export default function BusinessPage() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [editing, setEditing] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bootFailed, setBootFailed] = useState(false);
+  const [stale, setStale] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -39,10 +44,16 @@ export default function BusinessPage() {
     let alive = true;
     void (async () => {
       try {
-        const listed = await api<Business[]>('/businesses');
-        if (alive) setBusinesses(listed);
+        const listed = await apiCached<Business[]>('/businesses');
+        if (!alive) return;
+        setBusinesses(listed.data);
+        setStale(listed.stale);
+        setFetchedAt(listed.fetchedAt);
       } catch (reason) {
-        if (alive) setError(describe(reason, 'No se pudo cargar.'));
+        if (alive) {
+          setBootFailed(true);
+          setError(describe(reason, 'No se pudo cargar.'));
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -236,10 +247,19 @@ export default function BusinessPage() {
             <h2 className="font-heading text-lg font-bold">
               Emprendimientos registrados
             </h2>
+            {stale && (
+              <p className="mt-3 text-sm font-medium text-amber-800">
+                {describeStaleness(fetchedAt)}
+              </p>
+            )}
             {loading ? (
               <p aria-live="polite">
                 <LoaderCircle className="mt-6 animate-spin text-primary" />
                 <span className="sr-only">Cargando emprendimientos</span>
+              </p>
+            ) : bootFailed && !businesses.length ? (
+              <p role="alert" className="mt-4 text-sm text-muted-foreground">
+                No se pudieron cargar los emprendimientos.
               </p>
             ) : businesses.length ? (
               <div className="mt-4 space-y-3">
@@ -278,10 +298,6 @@ export default function BusinessPage() {
                   </article>
                 ))}
               </div>
-            ) : error ? (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No se pudieron cargar los emprendimientos.
-              </p>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">
                 Aún no registraste un emprendimiento.

@@ -5,6 +5,7 @@ import {
   api,
   apiCached,
   clearTokens,
+  getAccessToken,
   hasSession,
   NETWORK_ERROR,
   OFFLINE_WRITE_ERROR,
@@ -45,7 +46,6 @@ function jsonResponse(body: unknown, status = 200) {
 
 const TOKENS = {
   access_token: 'acceso-1',
-  refresh_token: 'refresco-1',
   token_type: 'bearer',
   expires_in: 900,
 };
@@ -136,7 +136,7 @@ describe('renovación de sesión ante un 401', () => {
     expect(new Headers(retryInit.headers).get('Authorization')).toBe(
       'Bearer acceso-2',
     );
-    expect(sessionStorage.getItem('kawsay_access')).toBe('acceso-2');
+    expect(getAccessToken()).toBe('acceso-2');
   });
 
   it('cierra la sesión y redirige cuando la renovación falla', async () => {
@@ -156,7 +156,7 @@ describe('renovación de sesión ante un 401', () => {
     expect(location.href).toBe('/login');
   });
 
-  it('no intenta renovar si no hay token de refresco', async () => {
+  it('no intenta renovar si no hay aviso de sesión', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
@@ -176,7 +176,7 @@ describe('renovación de sesión ante un 401', () => {
           jsonResponse({ ...TOKENS, access_token: 'acceso-2' }),
         );
       }
-      const token = sessionStorage.getItem('kawsay_access');
+      const token = getAccessToken();
       return Promise.resolve(
         token === 'acceso-2'
           ? jsonResponse({ ok: true })

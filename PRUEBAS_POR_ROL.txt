@@ -1,6 +1,6 @@
 ================================================================================
 KAWSAY - GUIA DE PRUEBAS MANUALES POR ROL
-Version del sistema: v0.8.1
+Version del sistema: v0.12.0
 ================================================================================
 
 Este documento explica que hacer, en que orden, y que deberia pasar en cada

@@ -89,26 +89,40 @@ def _rates(run) -> dict[str, float]:
     }
 
 
-def _print_comparison(v1, v2) -> None:
-    izquierda, derecha = _rates(v1), _rates(v2)
-    print(f"\nConjunto: {v1.evaluation_set_name} v{v1.evaluation_set_version}")
-    print(f"Casos: {len(v1.results)}\n")
-    print(f"{'':<16}{'v1 (LIKE)':>12}{'v2 (FULLTEXT)':>16}")
-    print("-" * 44)
-    for clave in izquierda:
-        print(f"{clave:<16}{izquierda[clave]:>11.0%}{derecha[clave]:>16.0%}")
+@contextmanager
+def fulltext_retrieval():
+    """Fija el asistente en FULLTEXT v2 mientras dure el bloque."""
+    original = assistant_service._retrieve_published
+    version = assistant_service.MODEL_VERSION
+    assistant_service._retrieve_published = assistant_service._retrieve_fulltext
+    assistant_service.MODEL_VERSION = "v2"
+    try:
+        yield
+    finally:
+        assistant_service._retrieve_published = original
+        assistant_service.MODEL_VERSION = version
 
-    print(f"\n{'caso':<10}{'categoría':<16}{'v1':>6}{'v2':>6}   recall v1 -> v2")
+
+def _print_comparison(v2, v3) -> None:
+    izquierda, derecha = _rates(v2), _rates(v3)
+    print(f"\nConjunto: {v2.evaluation_set_name} v{v2.evaluation_set_version}")
+    print(f"Casos: {len(v2.results)}\n")
+    print(f"{'':<16}{'v2 (FULLTEXT)':>16}{'v3 (VECTOR)':>14}")
+    print("-" * 46)
+    for clave in izquierda:
+        print(f"{clave:<16}{izquierda[clave]:>15.0%}{derecha[clave]:>14.0%}")
+
+    print(f"\n{'caso':<10}{'categoría':<16}{'v2':>6}{'v3':>6}   recall v2 -> v3")
     print("-" * 60)
-    por_caso = {r.case_code: r for r in v2.results}
-    for anterior in v1.results:
+    por_caso = {r.case_code: r for r in v3.results}
+    for anterior in v2.results:
         actual = por_caso[anterior.case_code]
         print(
             f"{anterior.case_code:<10}{anterior.category:<16}"
             f"{'sí' if anterior.passed else 'no':>6}{'sí' if actual.passed else 'no':>6}"
             f"   {anterior.retrieval_recall:.2f} -> {actual.retrieval_recall:.2f}"
         )
-    print(f"\nCorridas: v1={v1.id}  v2={v2.id}")
+    print(f"\nCorridas: v2={v2.id}  v3={v3.id}")
 
 
 def main() -> None:
@@ -118,17 +132,23 @@ def main() -> None:
 
     seed(reset=True)
     with SessionLocal() as db:
+        from app.models.rag import SourceChunk
+        from app.services.embedding_service import persist_chunk_embedding
+
+        for chunk in db.scalars(select(SourceChunk)).all():
+            persist_chunk_embedding(db, chunk)
+        db.commit()
         conjunto = db.scalar(
             select(EvaluationSet).where(
                 EvaluationSet.name == SET_NAME, EvaluationSet.version == SET_VERSION
             )
         )
         curadora = _curator(db)
-        with legacy_retrieval():
-            v1 = evaluation_service.run_evaluation(db, curadora, conjunto.id)
-        v2 = evaluation_service.run_evaluation(db, curadora, conjunto.id)
+        with fulltext_retrieval():
+            v2 = evaluation_service.run_evaluation(db, curadora, conjunto.id)
+        v3 = evaluation_service.run_evaluation(db, curadora, conjunto.id)
 
-    _print_comparison(v1, v2)
+    _print_comparison(v2, v3)
 
 
 if __name__ == "__main__":

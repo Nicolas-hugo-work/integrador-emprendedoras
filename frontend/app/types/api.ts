@@ -8,7 +8,6 @@
 
 export type TokenPair = {
   access_token: string;
-  refresh_token: string;
   token_type: string;
   expires_in: number;
 };
@@ -246,4 +245,39 @@ export type EvaluationRun = {
 
 export type EvaluationRunDetail = EvaluationRun & {
   results: EvaluationResult[];
+};
+
+export type DiagnosticQuestion = {
+  code: string;
+  prompt: string;
+};
+
+export type DiagnosticAnswer = {
+  question_code: string;
+  answer_text: string;
+};
+
+export type DiagnosticSession = {
+  id: string;
+  business_id: string;
+  questionnaire_version: string;
+  status: string;
+  answers: DiagnosticAnswer[];
+  completed_at?: string | null;
+};
+
+export type FormalizationStep = {
+  id: string;
+  step_number: number;
+  title: string;
+  description: string;
+  source_version_id?: string | null;
+  completed_at?: string | null;
+};
+
+export type FormalizationRoute = {
+  id: string;
+  business_id: string;
+  status: string;
+  steps: FormalizationStep[];
 };

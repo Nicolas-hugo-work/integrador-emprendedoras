@@ -15,7 +15,7 @@ import re
 from dataclasses import dataclass
 from uuid import uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.mysql import match
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -33,7 +33,7 @@ from app.services.authorization import assert_permission, owned_business
 #: evaluación etiqueta sus corridas con estos mismos valores, para que una
 #: corrida quede atribuida a la recuperación que la produjo.
 MODEL_NAME = "retrieval-only-mvp"
-MODEL_VERSION = "v2"
+MODEL_VERSION = "v3"
 
 NORMATIVE_TERMS = {
     "nit", "impuesto", "tributario", "tributaria", "seprec", "formalización",
@@ -255,18 +255,8 @@ def _classify(message: str) -> tuple[bool, list[str]]:
     return bool(terms & NORMATIVE_TERMS), sorted(terms)
 
 
-def _retrieve_published(db: Session, terms: list[str]) -> list:
-    """Recupera los fragmentos más relevantes de fuentes y versiones publicadas.
-
-    Usa el índice `idx_source_chunks_fulltext`, creado en `0001` y hasta ahora
-    sin uso. Frente al `LIKE '%término%'` anterior aporta tres cosas: ordena por
-    relevancia en vez de tomar lo primero que devuelva la base, coincide por
-    palabra completa y no por subcadena, y descarta las palabras vacías.
-
-    Una consulta sin términos utilizables no recupera nada, y el asistente se
-    abstiene. Antes devolvía tres fragmentos cualesquiera, que es peor: citar
-    algo que no viene al caso es más engañoso que decir que no se sabe.
-    """
+def _retrieve_fulltext(db: Session, terms: list[str], limit: int = MAX_EVIDENCE) -> list:
+    """Recuperación v2: índice FULLTEXT por relevancia."""
     if not terms:
         return []
     relevancia = match(
@@ -286,9 +276,68 @@ def _retrieve_published(db: Session, terms: list[str]) -> list:
             relevancia > 0,
         )
         .order_by(relevancia.desc())
-        .limit(MAX_EVIDENCE)
+        .limit(limit)
     )
     return db.execute(query).all()
+
+
+def _retrieve_vector(db: Session, terms: list[str]) -> list:
+    """Recuperación v3: VECTOR(768) por distancia coseno."""
+    from app.services.embedding_service import as_vec_text, embed
+
+    if not terms:
+        return []
+    qvec = as_vec_text(embed(" ".join(terms[:MAX_TERMS])))
+    rows = db.execute(
+        text(
+            """
+            SELECT sc.id
+            FROM source_chunk_embeddings emb
+            JOIN source_chunks sc ON sc.id = emb.source_chunk_id
+            JOIN source_versions sv ON sv.id = sc.source_version_id
+            JOIN sources s ON s.id = sv.source_id
+            WHERE sv.status = 'PUBLISHED' AND s.status = 'PUBLISHED'
+            ORDER BY VEC_DISTANCE_COSINE(emb.embedding, VEC_FromText(:qvec))
+            LIMIT :limit
+            """
+        ),
+        {"qvec": qvec, "limit": MAX_EVIDENCE},
+    ).all()
+    if not rows:
+        return []
+    ids = [row[0] for row in rows]
+    found = db.execute(
+        select(SourceChunk, SourceVersion, Source, SourcePublisher)
+        .join(SourceVersion, SourceVersion.id == SourceChunk.source_version_id)
+        .join(Source, Source.id == SourceVersion.source_id)
+        .join(SourcePublisher, SourcePublisher.id == Source.publisher_id)
+        .where(SourceChunk.id.in_(ids))
+    ).all()
+    order = {chunk_id: index for index, chunk_id in enumerate(ids)}
+    return sorted(found, key=lambda row: order.get(row[0].id, 99))
+
+
+def _retrieve_published(db: Session, terms: list[str]) -> list:
+    """Híbrido: FULLTEXT decide si hay evidencia; VECTOR solo reordena.
+
+    Un vecino coseno sin coincidencia léxica citaría un documento que no viene
+    al caso. El banco `NO_EVIDENCE` exige abstenerse: el filtro FULLTEXT se
+    queda. El vector, si existe, reordena hasta 12 candidatos y se quedan 3.
+    """
+    candidates = _retrieve_fulltext(db, terms, limit=12)
+    if not candidates:
+        return []
+    try:
+        ranked = _retrieve_vector(db, terms)
+    except Exception:
+        ranked = []
+    if not ranked:
+        return candidates[:MAX_EVIDENCE]
+    allowed = {row[0].id for row in candidates}
+    reranked = [row for row in ranked if row[0].id in allowed]
+    if not reranked:
+        return candidates[:MAX_EVIDENCE]
+    return reranked[:MAX_EVIDENCE]
 
 
 def _compose(evidence: list, normative: bool) -> tuple[str, str | None, bool]:

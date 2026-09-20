@@ -9,11 +9,9 @@ import {
 
 export type { TokenPair };
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
-const ACCESS_KEY = 'kawsay_access';
-const REFRESH_KEY = 'kawsay_refresh';
+const SESSION_HINT = 'kawsay_session';
 
 const GENERIC_ERROR = 'No se pudo completar la solicitud.';
 const EXPIRED_ERROR = 'Tu sesión expiró. Vuelve a ingresar.';
@@ -38,25 +36,54 @@ export type CachedResult<T> = {
   stale: boolean;
 };
 
-function readToken(key: string): string | null {
-  if (typeof window === 'undefined') return null;
-  return sessionStorage.getItem(key);
+let accessToken: string | null = null;
+
+function hintOn(): boolean {
+  if (typeof window === 'undefined') return false;
+  return sessionStorage.getItem(SESSION_HINT) === '1';
+}
+
+function setHint(on: boolean) {
+  if (typeof window === 'undefined') return;
+  if (on) sessionStorage.setItem(SESSION_HINT, '1');
+  else sessionStorage.removeItem(SESSION_HINT);
+}
+
+export function getAccessToken(): string | null {
+  return accessToken;
 }
 
 export function saveTokens(tokens: TokenPair) {
-  sessionStorage.setItem(ACCESS_KEY, tokens.access_token);
-  sessionStorage.setItem(REFRESH_KEY, tokens.refresh_token);
+  accessToken = tokens.access_token;
+  setHint(true);
 }
 
 export function clearTokens() {
+  const previous = accessToken;
+  accessToken = null;
+  setHint(false);
   if (typeof window === 'undefined') return;
-  sessionStorage.removeItem(ACCESS_KEY);
-  sessionStorage.removeItem(REFRESH_KEY);
   void clearOfflineCache();
+  if (previous && typeof window !== 'undefined') {
+    const origin = window.location.origin || 'http://localhost';
+    const url = API_URL.startsWith('http')
+      ? `${API_URL}/auth/logout`
+      : `${origin}${API_URL}/auth/logout`;
+    void fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${previous}`,
+      },
+    }).catch(() => {
+      /* el aviso de sesión ya se borró */
+    });
+  }
 }
 
 export function hasSession() {
-  return Boolean(readToken(ACCESS_KEY));
+  return Boolean(accessToken || hintOn());
 }
 
 /**
@@ -96,21 +123,19 @@ function asNetworkError(
 /**
  * Renovación de sesión compartida.
  *
- * El token de acceso dura 15 minutos. Hasta v0.1.0 el `refresh_token` se
- * guardaba pero no se usaba nunca, así que al vencer el acceso la usuaria
- * quedaba fuera sin aviso y sin forma de recuperarse. Varias peticiones que
- * fallan a la vez comparten un único intento de renovación.
+ * El refresh vive en cookie HttpOnly. El acceso de 15 minutos está en memoria:
+ * al recargar, este POST lo renueva. Varias peticiones que fallan a la vez
+ * comparten un único intento.
  */
 let refreshInFlight: Promise<boolean> | null = null;
 
 async function performRefresh(): Promise<boolean> {
-  const refreshToken = readToken(REFRESH_KEY);
-  if (!refreshToken) return false;
+  if (!hintOn() && !accessToken) return false;
   try {
     const response = await fetch(`${API_URL}/auth/refresh`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
     });
     if (!response.ok) return false;
     saveTokens((await response.json()) as TokenPair);
@@ -129,20 +154,27 @@ function refreshSession(): Promise<boolean> {
 }
 
 function endSession() {
-  clearTokens();
-  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-    window.location.href = '/login';
+  accessToken = null;
+  setHint(false);
+  if (typeof window !== 'undefined') {
+    void clearOfflineCache();
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
   }
 }
 
 function send(path: string, init: RequestInit, authenticated: boolean) {
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
-  if (authenticated) {
-    const token = readToken(ACCESS_KEY);
-    if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (authenticated && accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
   }
-  return fetch(`${API_URL}${path}`, { ...init, headers });
+  return fetch(`${API_URL}${path}`, {
+    ...init,
+    headers,
+    credentials: 'include',
+  });
 }
 
 async function toError(response: Response): Promise<Error> {
@@ -218,13 +250,12 @@ export async function apiCached<T>(path: string): Promise<CachedResult<T>> {
         return { data: cached.data, fetchedAt: cached.fetchedAt, stale: true };
       }
     }
-    throw reason instanceof Error
-      ? reason
-      : new NetworkError(false);
+    throw reason instanceof Error ? reason : new NetworkError(false);
   }
 }
 
 /** Solo para pruebas: olvida la renovación en curso entre casos. */
 export function __resetRefreshState() {
   refreshInFlight = null;
+  accessToken = null;
 }

@@ -187,17 +187,25 @@ def test_conversations_round_trip(client, account, business) -> None:
 
 
 def test_session_can_be_refreshed_and_closed(client, account) -> None:
-    refreshed = client.post("/auth/refresh", json={"refresh_token": account.refresh_token})
+    refreshed = client.post("/auth/refresh", cookies={"kawsay_refresh": account.refresh_token})
     assert refreshed.status_code == 200, refreshed.text
     rotated = refreshed.json()
-    assert rotated["refresh_token"] != account.refresh_token, "el token de refresco rota"
+    assert "refresh_token" not in rotated
+    new_refresh = refreshed.cookies.get("kawsay_refresh")
+    assert new_refresh
+    assert new_refresh != account.refresh_token, "el token de refresco rota"
 
     # El token anterior queda revocado.
-    assert client.post("/auth/refresh", json={"refresh_token": account.refresh_token}).status_code == 401
+    assert (
+        client.post("/auth/refresh", cookies={"kawsay_refresh": account.refresh_token}).status_code
+        == 401
+    )
 
     headers = {"Authorization": f"Bearer {rotated['access_token']}"}
     closed = client.post(
-        "/auth/logout", headers=headers, json={"refresh_token": rotated["refresh_token"]}
+        "/auth/logout", headers=headers, cookies={"kawsay_refresh": new_refresh}
     )
     assert closed.status_code == 200
-    assert client.post("/auth/refresh", json={"refresh_token": rotated["refresh_token"]}).status_code == 401
+    assert (
+        client.post("/auth/refresh", cookies={"kawsay_refresh": new_refresh}).status_code == 401
+    )

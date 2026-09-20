@@ -132,6 +132,20 @@ INVENTORY: dict[tuple[str, str], Route] = {
     ("/businesses", "post"): Route("business.manage_own", _BUSINESS_BODY),
     ("/businesses/{business_id}", "patch"): Route("business.manage_own", _EMPTY),
     ("/businesses/{business_id}", "delete"): Route("business.manage_own"),
+    ("/diagnostic-questions", "get"): Route("business.manage_own"),
+    ("/diagnostic-sessions", "post"): Route(
+        "business.manage_own", {"business_id": ANY_ID}
+    ),
+    ("/diagnostic-sessions/{session_id}", "get"): Route("business.manage_own"),
+    ("/diagnostic-sessions/{session_id}/answers", "put"): Route(
+        "business.manage_own",
+        {"question_code": "ACTIVITY", "answer_text": "Artesanía"},
+    ),
+    ("/diagnostic-sessions/{session_id}/complete", "post"): Route("business.manage_own"),
+    ("/formalization-routes", "get"): Route(
+        "business.manage_own", params={"business_id": ANY_ID}
+    ),
+    ("/formalization-steps/{step_id}/complete", "post"): Route("business.manage_own"),
     ("/finance/categories", "get"): Route("finance.read_own"),
     ("/finance/movements", "get"): Route("finance.read_own"),
     ("/finance/movements", "post"): Route("finance.write_own", _MOVEMENT_BODY),

@@ -10,13 +10,16 @@ import {
   ShieldAlert,
   Sparkles,
 } from 'lucide-react';
+import { useOffline } from 'next/offline';
+
 import { AppShell } from '../components/app-shell';
-import { api } from '../lib/api';
+import { api, isNetworkError, OFFLINE_WRITE_ERROR } from '../lib/api';
 import { fieldValue } from '../lib/form';
 
 import type { AssistantAnswer } from '../types/api';
 
 export default function AssistantPage() {
+  const offline = useOffline();
   const [history, setHistory] = useState<
     { question: string; result: AssistantAnswer }[]
   >([]);
@@ -28,8 +31,12 @@ export default function AssistantPage() {
     const data = new FormData(form);
     const message = fieldValue(data, 'message').trim();
     if (!message) return;
-    setLoading(true);
     setError('');
+    if (offline) {
+      setError(OFFLINE_WRITE_ERROR);
+      return;
+    }
+    setLoading(true);
     try {
       const result = await api<AssistantAnswer>('/assistant/query', {
         method: 'POST',
@@ -39,7 +46,11 @@ export default function AssistantPage() {
       form.reset();
     } catch (reason) {
       setError(
-        reason instanceof Error ? reason.message : 'No se pudo consultar.',
+        isNetworkError(reason)
+          ? OFFLINE_WRITE_ERROR
+          : reason instanceof Error
+            ? reason.message
+            : 'No se pudo consultar.',
       );
     } finally {
       setLoading(false);
@@ -153,7 +164,7 @@ export default function AssistantPage() {
                 placeholder="Escribe tu pregunta…"
               />
               <button
-                disabled={loading}
+                disabled={loading || offline}
                 className="grid size-12 shrink-0 place-items-center self-end rounded-xl bg-primary text-white disabled:opacity-60"
                 aria-label="Enviar pregunta"
               >

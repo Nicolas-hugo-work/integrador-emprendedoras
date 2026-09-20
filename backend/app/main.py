@@ -21,6 +21,7 @@ from app.routers import (
     audit,
     auth,
     businesses,
+    diagnostics,
     evaluation,
     finance,
     privacy,
@@ -34,6 +35,7 @@ ROUTERS = (
     auth,
     account,
     businesses,
+    diagnostics,
     finance,
     assistant,
     privacy,
@@ -47,7 +49,7 @@ ROUTERS = (
 def create_app() -> FastAPI:
     """Construye la aplicación con su middleware, errores y routers."""
     settings = get_settings()
-    application = FastAPI(title=settings.app_name, version="0.8.1")
+    application = FastAPI(title=settings.app_name, version="0.12.0")
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
