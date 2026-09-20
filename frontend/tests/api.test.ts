@@ -3,10 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   __resetRefreshState,
   api,
+  apiCached,
   clearTokens,
   hasSession,
+  NETWORK_ERROR,
+  OFFLINE_WRITE_ERROR,
   saveTokens,
 } from '../app/lib/api';
+import * as cache from '../app/lib/offline-cache';
 
 /** `sessionStorage` mínimo en memoria, suficiente para el cliente HTTP. */
 function createStorage() {
@@ -201,5 +205,101 @@ describe('renovación de sesión ante un 401', () => {
       'Credenciales inválidas',
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('fallo de red', () => {
+  it('envuelve el TypeError del navegador en un mensaje en español', async () => {
+    saveTokens(TOKENS);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+    );
+
+    await expect(api('/finance/summary')).rejects.toThrow(NETWORK_ERROR);
+  });
+
+  it('en una escritura dice que no se guardó', async () => {
+    saveTokens(TOKENS);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+    );
+
+    await expect(api('/finance/movements', { method: 'POST' })).rejects.toThrow(
+      OFFLINE_WRITE_ERROR,
+    );
+  });
+
+  it('un 404 no se disfraza de fallo de red', async () => {
+    saveTokens(TOKENS);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ detail: 'no está' }, 404)),
+    );
+
+    await expect(api('/finance/summary')).rejects.toThrow('no está');
+  });
+});
+
+describe('apiCached', () => {
+  it('guarda la respuesta buena y la reutiliza si cae la red', async () => {
+    saveTokens(TOKENS);
+    const fetchedAt = new Date('2026-09-20T15:00:00.000Z');
+    vi.spyOn(cache, 'writeCached').mockResolvedValue();
+    const read = vi.spyOn(cache, 'readCached').mockResolvedValue(null);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ balance: '10.00' })),
+    );
+
+    const first = await apiCached<{ balance: string }>('/finance/summary');
+    expect(first).toEqual({
+      data: { balance: '10.00' },
+      fetchedAt: expect.any(Date),
+      stale: false,
+    });
+    expect(cache.writeCached).toHaveBeenCalled();
+
+    read.mockResolvedValue({
+      data: { balance: '10.00' },
+      fetchedAt,
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+    );
+
+    const second = await apiCached<{ balance: string }>('/finance/summary');
+    expect(second).toEqual({
+      data: { balance: '10.00' },
+      fetchedAt,
+      stale: true,
+    });
+  });
+
+  it('un HTTP 404 no se sirve desde el caché', async () => {
+    saveTokens(TOKENS);
+    vi.spyOn(cache, 'readCached').mockResolvedValue({
+      data: { balance: '10.00' },
+      fetchedAt: new Date(),
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ detail: 'no está' }, 404)),
+    );
+
+    await expect(apiCached('/finance/summary')).rejects.toThrow('no está');
+  });
+
+  it('sin caché y sin red, lanza el error de red', async () => {
+    saveTokens(TOKENS);
+    vi.spyOn(cache, 'readCached').mockResolvedValue(null);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+    );
+
+    await expect(apiCached('/finance/summary')).rejects.toThrow(NETWORK_ERROR);
   });
 });

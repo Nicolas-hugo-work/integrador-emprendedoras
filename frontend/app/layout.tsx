@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import { OfflineBanner } from './components/offline-banner';
 import { PwaRegister } from './pwa-register';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -13,7 +14,6 @@ export const metadata: Metadata = {
   title: { default: 'Kawsay | Autonomía económica', template: '%s | Kawsay' },
   description:
     'Herramientas sencillas para fortalecer tu negocio y tu autonomía económica.',
-  manifest: '/manifest.webmanifest',
 };
 
 export const viewport: Viewport = {
@@ -30,6 +30,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <OfflineBanner />
         <PwaRegister />
         {children}
       </body>

@@ -62,8 +62,8 @@ def audio_purge_deadline(uploaded_at: datetime, confirmed_at: datetime | None) -
 
     Todavía no la invoca ningún caso de uso porque no existe un endpoint de
     carga de audio: `tasks.purge_audio_metadata` lee `AudioArtifact.purge_at`,
-    pero nada crea esas filas. Queda como contrato listo para v0.3.0, cuando se
-    añada la carga de notas de voz; su comportamiento está fijado por pruebas.
+    pero nada crea esas filas. Queda como contrato listo para cuando se añada
+    la carga de notas de voz; su comportamiento está fijado por pruebas.
     """
     hard_limit = uploaded_at + timedelta(hours=24)
     return min(hard_limit, confirmed_at) if confirmed_at else hard_limit
@@ -76,11 +76,9 @@ def account_purge_deadline(requested_at: datetime) -> datetime:
 def optional_feature_allowed(latest_decision: str | None) -> bool:
     """Indica si una finalidad opcional está vigente para la usuaria.
 
-    Tampoco tiene todavía punto de uso: la API no expone una lectura de
-    consentimientos (`GET /consents`), así que la pantalla de privacidad
-    mantiene el estado en el cliente. Añadir ese endpoint cambiaría la
-    superficie HTTP más allá de lo aprobado para v0.2.0, de modo que la regla
-    queda documentada y probada a la espera de v0.3.0.
+    Se usa al armar el estado de cada consentimiento en
+    `privacy_service.list_consents`. `allowed` es verdadero solo cuando la
+    última decisión registrada es `GRANTED`.
     """
     return latest_decision == "GRANTED"
 

@@ -9,8 +9,8 @@ import {
   ChevronRight,
   CircleDollarSign,
   Goal,
+  LoaderCircle,
   Menu,
-  MessageCircleQuestion,
   Plus,
   Sparkles,
   TrendingUp,
@@ -18,11 +18,25 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { api, clearTokens, hasSession } from './lib/api';
+import { apiCached, clearTokens, hasSession } from './lib/api';
 import { firstAllowedHref, useNavLinks } from './lib/navigation';
 import { useSession } from './lib/session';
+import { describeStaleness } from './lib/staleness';
 
 import type { Business, Movement, Summary } from './types/api';
+
+type Dashboard =
+  | { kind: 'loading' }
+  | { kind: 'no-business' }
+  | { kind: 'error' }
+  | {
+      kind: 'ready';
+      businessName: string;
+      summary: Summary;
+      movements: Movement[];
+      fetchedAt: Date | null;
+      stale: boolean;
+    };
 
 export default function Home() {
   const router = useRouter();
@@ -30,13 +44,7 @@ export default function Home() {
   const navItems = useNavLinks();
   const { has, loading: cargandoSesion } = useSession();
   const puedeVerInicio = has('business.manage_own');
-  const [businessName, setBusinessName] = useState('tu negocio');
-  const [summary, setSummary] = useState<Summary>({
-    income: '0',
-    outflow: '0',
-    balance: '0',
-  });
-  const [movements, setMovements] = useState<Movement[]>([]);
+  const [dashboard, setDashboard] = useState<Dashboard>({ kind: 'loading' });
 
   useEffect(() => {
     if (!hasSession()) {
@@ -50,18 +58,36 @@ export default function Home() {
       router.replace(firstAllowedHref(has));
       return;
     }
-    api<Business[]>('/businesses')
-      .then(async (businesses) => {
-        if (!businesses[0]) return;
-        setBusinessName(businesses[0].name);
+    let alive = true;
+    void (async () => {
+      try {
+        const listed = await apiCached<Business[]>('/businesses');
+        if (!alive) return;
+        if (!listed.data[0]) {
+          setDashboard({ kind: 'no-business' });
+          return;
+        }
+        const business = listed.data[0];
         const [totals, recent] = await Promise.all([
-          api<Summary>(`/finance/summary?business_id=${businesses[0].id}`),
-          api<Movement[]>(`/finance/movements?business_id=${businesses[0].id}`),
+          apiCached<Summary>(`/finance/summary?business_id=${business.id}`),
+          apiCached<Movement[]>(`/finance/movements?business_id=${business.id}`),
         ]);
-        setSummary(totals);
-        setMovements(recent.slice(0, 3));
-      })
-      .catch(() => undefined);
+        if (!alive) return;
+        setDashboard({
+          kind: 'ready',
+          businessName: business.name,
+          summary: totals.data,
+          movements: recent.data.slice(0, 3),
+          fetchedAt: totals.fetchedAt,
+          stale: listed.stale || totals.stale || recent.stale,
+        });
+      } catch {
+        if (alive) setDashboard({ kind: 'error' });
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, [router, cargandoSesion, puedeVerInicio, has]);
 
   function logout() {
@@ -70,6 +96,20 @@ export default function Home() {
   }
   const money = (value: string) =>
     `Bs ${Number(value).toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
+
+  const ready = dashboard.kind === 'ready';
+  const businessName = ready ? dashboard.businessName : 'tu negocio';
+  const movements = ready ? dashboard.movements : [];
+  const hero =
+    dashboard.kind === 'loading'
+      ? 'Cargando tu saldo…'
+      : dashboard.kind === 'error'
+        ? 'No se pudo cargar tu saldo'
+        : dashboard.kind === 'no-business'
+          ? 'Registra tu emprendimiento para ver tu saldo'
+          : `Tu saldo registrado es ${money(dashboard.summary.balance)}`;
+  const cardValue = (key: keyof Summary) =>
+    ready ? money(dashboard.summary[key]) : '—';
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -164,19 +204,40 @@ export default function Home() {
                 <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs font-semibold">
                   <Sparkles className="size-3.5" /> {businessName}
                 </span>
-                <h2 className="max-w-2xl font-heading text-2xl font-bold leading-tight sm:text-3xl">
-                  Tu saldo registrado es {money(summary.balance)}
+                <h2
+                  aria-live="polite"
+                  className="max-w-2xl font-heading text-2xl font-bold leading-tight sm:text-3xl"
+                >
+                  {dashboard.kind === 'loading' && (
+                    <LoaderCircle className="mr-3 inline size-6 animate-spin" />
+                  )}
+                  {hero}
                 </h2>
+                {ready && dashboard.stale && (
+                  <p className="mt-2 text-sm font-medium text-primary-foreground/80">
+                    {describeStaleness(dashboard.fetchedAt)}
+                  </p>
+                )}
                 <p className="mt-3 max-w-xl text-sm leading-6 text-primary-foreground/75">
-                  Registra los movimientos de hoy para mantener tu resumen al
-                  día.
+                  {dashboard.kind === 'error'
+                    ? 'Revisa la conexión e inténtalo de nuevo. No mostramos un saldo si no pudimos comprobarlo.'
+                    : dashboard.kind === 'no-business'
+                      ? 'Cuando registres tu negocio, aquí verás el saldo que sí está en tus movimientos.'
+                      : 'Registra los movimientos de hoy para mantener tu resumen al día.'}
                 </p>
               </div>
               <Link
-                href="/finanzas"
+                href={
+                  dashboard.kind === 'no-business'
+                    ? '/emprendimiento'
+                    : '/finanzas'
+                }
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-primary transition hover:-translate-y-0.5"
               >
-                Ver mis finanzas <ArrowUpRight className="size-4" />
+                {dashboard.kind === 'no-business'
+                  ? 'Ir a Mi negocio'
+                  : 'Ver mis finanzas'}{' '}
+                <ArrowUpRight className="size-4" />
               </Link>
             </div>
           </section>
@@ -185,28 +246,32 @@ export default function Home() {
             {[
               {
                 label: 'Ingresos registrados',
-                value: money(summary.income),
+                value: cardValue('income'),
                 note: 'Movimientos del negocio',
                 icon: TrendingUp,
                 tone: 'text-emerald-700 bg-emerald-50',
               },
               {
                 label: 'Gastos y costos',
-                value: money(summary.outflow),
-                note: `${movements.length} movimientos recientes`,
+                value: cardValue('outflow'),
+                note: 'Actividad reciente',
                 icon: WalletCards,
                 tone: 'text-orange-700 bg-orange-50',
               },
               {
                 label: 'Saldo estimado',
-                value: money(summary.balance),
+                value: cardValue('balance'),
                 note: 'Ingresos menos salidas',
                 icon: CircleDollarSign,
                 tone: 'text-primary bg-primary/8',
               },
               {
                 label: 'Próximo paso',
-                value: movements.length ? 'Al día' : 'Comenzar',
+                value: ready
+                  ? movements.length
+                    ? 'Al día'
+                    : 'Comenzar'
+                  : '—',
                 note: 'Mantén tus registros',
                 icon: Goal,
                 tone: 'text-sky-700 bg-sky-50',
@@ -251,7 +316,16 @@ export default function Home() {
                 </Link>
               </div>
               <div className="divide-y">
-                {movements.length ? (
+                {dashboard.kind === 'loading' ? (
+                  <p aria-live="polite" className="py-6 text-center text-sm text-muted-foreground">
+                    <LoaderCircle className="mr-2 inline size-4 animate-spin" />
+                    Cargando movimientos
+                  </p>
+                ) : dashboard.kind === 'error' ? (
+                  <p role="alert" className="py-6 text-center text-sm text-muted-foreground">
+                    No se pudieron cargar los movimientos.
+                  </p>
+                ) : movements.length ? (
                   movements.map((movement) => {
                     const positive = movement.movement_type === 'INCOME';
                     return (
@@ -323,26 +397,6 @@ export default function Home() {
                 </Link>
               </div>
             </article>
-          </section>
-
-          <section className="rounded-3xl border bg-card p-5 shadow-sm sm:p-6">
-            <div className="grid gap-5 md:grid-cols-[auto_1fr_auto] md:items-center">
-              <span className="grid size-12 place-items-center rounded-2xl bg-secondary text-secondary-foreground">
-                <MessageCircleQuestion className="size-6" />
-              </span>
-              <div>
-                <h2 className="font-heading text-lg font-bold">
-                  Completa el diagnóstico de tu negocio
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Con tus respuestas podremos darte orientaciones más útiles y
-                  un plan de próximos pasos.
-                </p>
-              </div>
-              <button className="h-11 rounded-xl border px-5 text-sm font-bold text-primary hover:bg-primary/5">
-                Continuar diagnóstico
-              </button>
-            </div>
           </section>
         </div>
       </section>

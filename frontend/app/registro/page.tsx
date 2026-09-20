@@ -70,7 +70,7 @@ export default function RegisterPage() {
   return (
     <AuthFrame
       title="Crea tu cuenta"
-      description="Usa tu correo o teléfono. En el entorno local la verificación se completa automáticamente."
+      description="Usa tu correo o teléfono para crear tu cuenta."
     >
       <form className="space-y-4" onSubmit={submit}>
         <label className="block text-sm font-semibold">

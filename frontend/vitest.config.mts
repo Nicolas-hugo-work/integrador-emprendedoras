@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * Vitest usa este archivo y no `vite.config.ts`, que quedó en el árbol como
- * andamiaje de otro generador y referencia paquetes que no están instalados.
+ * Vitest usa este archivo. El andamiaje de Vite + Cloudflare de otro
+ * generador ya no forma parte del árbol.
  */
 export default defineConfig({
   test: {

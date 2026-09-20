@@ -1,0 +1,758 @@
+================================================================================
+KAWSAY - GUIA DE PRUEBAS MANUALES POR ROL
+Version del sistema: v0.8.0
+================================================================================
+
+Este documento explica que hacer, en que orden, y que deberia pasar en cada
+paso. No modifica nada del proyecto: es solo la guia.
+
+Idea general: cada rol ve UNICAMENTE lo suyo. Buena parte de la prueba no
+consiste en comprobar que algo funciona, sino en comprobar que lo que NO
+corresponde a ese rol efectivamente no aparece y no se puede alcanzar ni
+escribiendo la direccion a mano.
+
+
+================================================================================
+0. ANTES DE EMPEZAR
+================================================================================
+
+0.1 LEVANTAR LOS SERVICIOS
+--------------------------------------------------------------------------------
+Abre PowerShell y ejecuta:
+
+    cd C:\proyecto-integrador
+    docker compose up -d
+
+Espera a que los tres contenedores esten arriba. Para confirmarlo:
+
+    docker compose ps
+
+Deberias ver "mariadb", "backend" y "frontend". El de mariadb debe decir
+"healthy". Si el backend aparece reiniciandose, espera unos segundos: al
+arrancar aplica las migraciones antes de aceptar peticiones.
+
+Direcciones:
+    Aplicacion (lo que vas a probar) ....... http://localhost:3000
+    API .................................... http://localhost:8000
+    Documentacion interactiva de la API .... http://localhost:8000/docs
+
+Comprobacion rapida de que el backend responde:
+
+    curl http://localhost:8000/health
+
+Debe devolver: {"status":"ok","service":"pwa-autonomia-backend"}
+
+
+0.2 CREAR LAS CUENTAS DE PRUEBA
+--------------------------------------------------------------------------------
+Solo hace falta la primera vez, o si borraste la base. Es reejecutable: si las
+cuentas ya existen, les restablece la contrasena y su unico rol.
+
+    cd C:\proyecto-integrador\backend
+    $env:DATABASE_URL="mysql+pymysql://pwa_app:change_me_local@127.0.0.1:3306/pwa_autonomia?charset=utf8mb4"
+    .\.venv\Scripts\python.exe -m scripts.seed_test_users --password "Kawsay-Prueba-2026"
+
+Debe imprimir las cinco cuentas creadas.
+
+IMPORTANTE - por que hay que pasarle DATABASE_URL a mano:
+La carpeta backend no tiene un archivo .env (solo .env.example), asi que los
+guiones no saben solos a que base conectarse. Y este guion NO se puede correr
+dentro del contenedor: la imagen de Docker no copia la carpeta scripts/, solo
+app/, alembic/ y alembic.ini.
+
+
+0.3 SEMBRAR EL BANCO DE EVALUACION  (solo si vas a probar el rol CURADORA
+    o AUDITORA en la pantalla de Evaluacion)
+--------------------------------------------------------------------------------
+    cd C:\proyecto-integrador\backend
+    $env:CONTENT_ENCRYPTION_KEY="local-development-encryption-key-change-in-production"
+    $env:DATABASE_URL="mysql+pymysql://pwa_app:change_me_local@127.0.0.1:3306/pwa_autonomia?charset=utf8mb4"
+    .\.venv\Scripts\python.exe -m scripts.seed_evaluation_set
+
+Publica 8 documentos de prueba y crea un conjunto con 10 casos.
+
+CUIDADO CON LA CLAVE DE CIFRADO:
+Los enunciados de los casos se guardan cifrados. Si siembras SIN pasar
+CONTENT_ENCRYPTION_KEY, se cifran con la clave de tu maquina, que no es la
+misma que usa el contenedor, y al abrir la pantalla de Evaluacion veras un
+error diciendo que no se pudo descifrar el caso tal. La linea de arriba usa la
+clave del contenedor, que es la correcta.
+
+Si te pasa igual, rehazlo con:
+    .\.venv\Scripts\python.exe -m scripts.seed_evaluation_set --reset
+
+
+0.4 COMO INGRESAR
+--------------------------------------------------------------------------------
+Abre http://localhost:3000 y usa cualquiera de estas cuentas.
+La contrasena es la MISMA para las cinco: Kawsay-Prueba-2026
+
+    emprendedora.prueba@kawsay.local
+    curadora.rag.prueba@kawsay.local
+    administradora.prueba@kawsay.local
+    auditora.prueba@kawsay.local
+    servicio.interno.prueba@kawsay.local
+
+CONSEJO PARA PROBAR DOS ROLES A LA VEZ:
+La sesion se guarda por pestana. Para tener dos roles abiertos al mismo tiempo
+sin pisarte, usa una VENTANA DE INCOGNITO para el segundo. Lo vas a necesitar,
+por ejemplo, cuando la curadora publique un documento y quieras comprobar con
+la emprendedora que el asistente ya lo cita.
+
+CIERRE DE SESION:
+Si cambias de rol en la misma ventana, cierra sesion primero. El menu se arma
+con los permisos de quien esta dentro, y si no cierras sesion seguiras viendo
+el menu anterior.
+
+
+================================================================================
+1. MAPA DE ROLES: QUE TIENE CADA UNA
+================================================================================
+
+  ROL                        PERMISOS                      MENU QUE DEBE VER
+  -------------------------  ----------------------------  ------------------
+  EMPRENDEDORA               business.manage_own           Inicio
+                             finance.read_own              Mi negocio
+                             finance.write_own             Finanzas
+                             conversation.manage_own       Asistente
+                             profile.manage_own            Privacidad
+
+  CURADORA_RAG               source.review                 Curaduria
+                             source.publish                Evaluacion
+                                                           Privacidad
+
+  ADMINISTRADORA             account.suspend               Administracion
+                             audit.read                    Auditoria
+                                                           Evaluacion
+                                                           Privacidad
+
+  AUDITORA_INVESTIGADORA     audit.read                    Auditoria
+                             research.read_anonymized      Evaluacion
+                                                           Privacidad
+
+  SERVICIO_INTERNO           jobs.execute                  Privacidad
+                                                           (solo eso)
+
+Dos aclaraciones honestas sobre esta tabla:
+
+- "research.read_anonymized" y "jobs.execute" estan sembrados en la base, pero
+  HOY NINGUN ENDPOINT LOS EXIGE. No abren ninguna pantalla. Por eso la auditora
+  trabaja realmente con audit.read, y el servicio interno no tiene nada que
+  hacer mas que su propia privacidad. No es un error: son permisos reservados
+  para funciones que todavia no existen.
+
+- Privacidad aparece para todas y no exige ningun permiso. Es a proposito:
+  controlar tus propios datos es un derecho de cualquier cuenta, no una funcion
+  de un rol. Por eso el servicio interno, que no puede hacer nada mas, al menos
+  puede entrar ahi.
+
+
+================================================================================
+2. ROL EMPRENDEDORA
+================================================================================
+Cuenta: emprendedora.prueba@kawsay.local
+
+Es el rol con mas funciones y el unico que representa a la usuaria final.
+
+AL INGRESAR
+--------------------------------------------------------------------------------
+Debe llevarte a la pantalla de Inicio ( / ).
+En el menu lateral deben aparecer EXACTAMENTE cinco enlaces:
+Inicio, Mi negocio, Finanzas, Asistente, Privacidad.
+
+Si ves Curaduria, Administracion, Auditoria o Evaluacion, eso es un fallo.
+
+
+PRUEBA 2.1 - REGISTRAR EL EMPRENDIMIENTO
+--------------------------------------------------------------------------------
+Hazlo PRIMERO: Finanzas no funciona sin un emprendimiento registrado.
+
+  1. Entra en "Mi negocio".
+  2. Llena el formulario:
+       Nombre .......... Tejidos Esperanza
+       Etapa ........... elige una de las cinco
+                         (Tengo una idea / Estoy comenzando / Ya esta
+                          funcionando / Esta creciendo / Esta en pausa)
+       Actividad ....... Artesania
+       Departamento .... LP        (codigo corto: LP, CB, SC...)
+       Municipio ....... La Paz
+  3. Guarda.
+
+QUE DEBE PASAR: el emprendimiento aparece listado en la misma pantalla.
+
+  4. Editalo: cambia el nombre o la etapa y guarda de nuevo.
+     QUE DEBE PASAR: se actualiza sin crear uno nuevo.
+  5. Borralo y vuelve a crearlo, si quieres comprobar el borrado.
+     QUE DEBE PASAR: desaparece de la lista. (Es borrado logico: la fila sigue
+     en la base marcada como borrada, no se pierde la trazabilidad.)
+
+
+PRUEBA 2.2 - FINANZAS
+--------------------------------------------------------------------------------
+  1. Entra en "Finanzas".
+     Si NO registraste un emprendimiento, debe decirte "Primero registra tu
+     emprendimiento" con un boton para ir alla. Eso es correcto, no un error.
+  2. Arriba hay un selector de negocio. Si tienes varios, elige uno.
+  3. Registra un INGRESO:
+       Tipo ............ Ingreso
+       Categoria ....... elige una de la lista
+       Monto ........... 350.00
+       Fecha ........... la de hoy
+       Nota ............ Venta de feria
+  4. Registra un GASTO y un COSTO de la misma forma, con montos distintos.
+
+QUE DEBE PASAR: los tres movimientos aparecen en la lista y el resumen del mes
+cuadra (ingresos menos salidas).
+
+  5. Edita uno de los movimientos: cambia el monto.
+     QUE DEBE PASAR: el resumen se recalcula.
+  6. Borra uno.
+     QUE DEBE PASAR: desaparece de la lista y sale del resumen.
+
+QUE PROBAR QUE FALLE (a proposito):
+  7. Intenta guardar un movimiento con monto 0 o negativo.
+     QUE DEBE PASAR: lo rechaza. El monto debe ser mayor que cero.
+
+
+PRUEBA 2.3 - EL ASISTENTE
+--------------------------------------------------------------------------------
+Esta es la funcion mas delicada del proyecto. Lo que hay que verificar no es
+que "responda bonito", sino tres promesas concretas: que cite siempre, que
+advierta cuando la respuesta es normativa, y que se abstenga cuando no sabe.
+
+  1. Entra en "Asistente".
+  2. Pregunta algo que SEGURO no esta en ninguna fuente. Por ejemplo:
+        cuanto cuesta exportar quinua a groenlandia
+     QUE DEBE PASAR: se abstiene. Debe decir que no encontro evidencia
+     suficiente y NO debe mostrar ninguna cita. Si se inventa una respuesta,
+     eso es un fallo grave.
+
+  3. Escribe una pregunta con puras palabras cortas, por ejemplo:
+        y eso?
+     QUE DEBE PASAR: tambien se abstiene. (Desde v0.7.0, una consulta sin
+     ninguna palabra util no devuelve fragmentos al azar.)
+
+  4. Si ya sembraste el banco de evaluacion (paso 0.3), pregunta:
+        como hago el registro de comercio
+     QUE DEBE PASAR: responde citando la guia de registro de comercio, con la
+     institucion, el titulo, el enlace y la version de la fuente.
+
+  5. Pregunta algo normativo, por ejemplo:
+        que impuesto pago segun mi regimen tributario
+     QUE DEBE PASAR: responde CON cita Y CON una advertencia que dice que la
+     informacion esta sujeta a cambios y hay que verificarla en la fuente
+     oficial. Una respuesta normativa nunca debe ir sin advertencia ni sin
+     cita.
+
+  6. Marca una respuesta como util o no util (retroalimentacion).
+     QUE DEBE PASAR: lo acepta una sola vez por mensaje. Si intentas votar dos
+     veces el mismo mensaje, debe rechazarlo.
+
+
+PRUEBA 2.4 - PRIVACIDAD
+--------------------------------------------------------------------------------
+  1. Entra en "Privacidad".
+  2. Veras tres consentimientos que puedes activar o desactivar:
+       AUDIO ............ transcribir notas de voz
+       RESEARCH ......... metricas seudonimizadas del piloto
+       SECONDARY_USE .... usos adicionales
+     Activa uno y desactivalo.
+     QUE DEBE PASAR: el cambio queda registrado y se refleja al recargar.
+
+  3. Pulsa "Descargar una copia de mis datos".
+     QUE DEBE PASAR: genera la exportacion y te la descarga. Abrela y revisa
+     que incluya tu emprendimiento, tus movimientos y tus conversaciones.
+
+  4. NO PULSES "Eliminar mi cuenta" salvo que quieras probarlo a proposito.
+     Si lo haces: la cuenta pasa a estado DELETED, deja de poder ingresar, y su
+     purga queda programada. Para recuperarla tendrias que volver a correr el
+     guion del paso 0.2.
+
+
+PRUEBA 2.5 - LO QUE NO DEBE PODER (importante)
+--------------------------------------------------------------------------------
+Con la sesion de emprendedora abierta, escribe estas direcciones A MANO en la
+barra del navegador:
+
+    http://localhost:3000/curaduria
+    http://localhost:3000/administracion
+    http://localhost:3000/auditoria
+    http://localhost:3000/evaluacion
+
+QUE DEBE PASAR EN LAS CUATRO: una tarjeta que dice que no tienes acceso a esa
+seccion y cual es el permiso que hace falta. NO debe mostrarse el contenido, ni
+siquiera un instante, ni una pantalla en blanco con un error tecnico.
+
+
+================================================================================
+3. ROL CURADORA_RAG
+================================================================================
+Cuenta: curadora.rag.prueba@kawsay.local
+
+Es quien alimenta al asistente. Todo lo que el asistente cita pasa antes por
+sus manos.
+
+AL INGRESAR
+--------------------------------------------------------------------------------
+Debe llevarte directamente a Curaduria (NO a la pantalla de Inicio).
+En el menu deben aparecer EXACTAMENTE tres enlaces:
+Curaduria, Evaluacion, Privacidad.
+
+Ojo con esto: la curadora NO tiene Asistente. Puede cargar las fuentes que el
+asistente usa, pero no conversar con el. Es correcto.
+
+
+PRUEBA 3.1 - CARGAR UN DOCUMENTO (los tres pasos)
+--------------------------------------------------------------------------------
+La pantalla esta dividida en tres pasos numerados. Hazlos en orden.
+
+PASO 1 - "La fuente"
+  Institucion emisora ... elige una de la lista
+  Titulo ................ Guia de registro de comercio
+  Enlace oficial ........ www.seprec.gob.bo/guia
+        (escribelo SIN https:// a proposito, para comprobar que lo completa
+         solo. Antes rechazaba el enlace sin decir por que.)
+  Tema .................. formalizacion
+  Licencia .............. dejalo vacio, es opcional
+  Guarda.
+
+  QUE DEBE PASAR: el paso 1 se marca como hecho y se abre el paso 2.
+
+PASO 2 - "El documento"
+  Etiqueta de version ... Gestion 2026
+  Fecha de publicacion .. la que quieras
+  Vigencias ............. opcionales
+  Texto completo ........ PEGA AQUI EL DOCUMENTO ENTERO, UNA SOLA VEZ.
+
+  Para la prueba puedes pegar tres o cuatro parrafos cualesquiera, separados
+  por lineas en blanco, e incluir alguna linea corta sin punto final para que
+  la tome como titulo de la seccion.
+
+  QUE DEBE PASAR: debajo aparece una VISTA PREVIA con el texto ya partido en
+  fragmentos numerados, que puedes revisar y corregir antes de guardar. No
+  debes tener que copiar nada trozo por trozo.
+
+  PRUEBA EXTRA: pega dos veces el mismo parrafo.
+  QUE DEBE PASAR: te avisa cuantos fragmentos repetidos descarto, en vez de
+  fallar con un error de base de datos.
+
+PASO 3 - "Revisar y publicar"
+  Revisa y publica.
+  QUE DEBE PASAR: la version pasa a estado PUBLICADA.
+
+
+PRUEBA 3.2 - COMPROBAR QUE EL ASISTENTE YA LO USA
+--------------------------------------------------------------------------------
+Esta es la prueba que de verdad cierra el circulo, y necesita DOS roles.
+
+  1. Abre una VENTANA DE INCOGNITO.
+  2. Ingresa como emprendedora.prueba@kawsay.local
+  3. Ve al Asistente y pregunta usando alguna palabra distintiva del documento
+     que acabas de publicar.
+
+QUE DEBE PASAR: responde citando tu documento, con el titulo y el enlace que
+pusiste en el paso 1.
+
+
+PRUEBA 3.3 - RETIRAR UNA VERSION
+--------------------------------------------------------------------------------
+  1. Vuelve a la ventana de la curadora.
+  2. Retira la version que publicaste, indicando un motivo
+     (por ejemplo: "La norma fue derogada en 2026").
+  3. En la ventana de incognito, vuelve a hacerle al asistente la misma
+     pregunta de antes.
+
+QUE DEBE PASAR: ahora se abstiene. Una version retirada no puede volver a
+citarse nunca. Esto es lo que evita que el asistente siga repitiendo una norma
+que ya no rige.
+
+
+PRUEBA 3.4 - EL BANCO DE EVALUACION
+--------------------------------------------------------------------------------
+Requiere haber sembrado el conjunto (paso 0.3).
+
+  1. Entra en "Evaluacion".
+  2. Arriba lee la explicacion de que mide el banco.
+  3. Comprueba que aparece el conjunto "Banco base de recuperacion v1" y sus
+     10 casos, cada uno con su categoria (Formalizacion, Finanzas, Mercadeo,
+     Seguridad, Inyeccion, Datos personales, Sin evidencia).
+  4. Pulsa "Ejecutar tanda".
+
+QUE DEBE PASAR: en unos segundos aparece un aviso verde diciendo cuantos casos
+pasaron, y debajo la tabla caso por caso con el resultado, la recuperacion y la
+observacion. Con el corpus sembrado deberian pasar los 10.
+
+  5. Ejecuta una SEGUNDA tanda.
+  6. En la tabla de corridas, marca una como "Antes" y otra como "Despues".
+
+QUE DEBE PASAR: aparece la comparacion, con las cinco medidas lado a lado y
+cada caso etiquetado como mejora, retroceso o igual. Entre dos corridas
+identicas deberia decir que ningun caso cambio de resultado.
+
+  7. Comprueba que ejecutar la tanda NO ensucio nada: entra en incognito como
+     emprendedora, ve al Asistente y mira que no hayan aparecido conversaciones
+     nuevas que tu no creaste. Evaluar no debe dejar rastro en las
+     conversaciones de nadie.
+
+
+PRUEBA 3.5 - LO QUE NO DEBE PODER
+--------------------------------------------------------------------------------
+Escribe a mano:
+
+    http://localhost:3000/                  (Inicio)
+    http://localhost:3000/finanzas
+    http://localhost:3000/asistente
+    http://localhost:3000/administracion
+    http://localhost:3000/auditoria
+
+QUE DEBE PASAR: acceso denegado en todas.
+
+
+================================================================================
+4. ROL ADMINISTRADORA
+================================================================================
+Cuenta: administradora.prueba@kawsay.local
+
+AL INGRESAR
+--------------------------------------------------------------------------------
+Debe llevarte a Administracion.
+Menu: Administracion, Auditoria, Evaluacion, Privacidad.
+
+
+PRUEBA 4.1 - BUSCAR Y VER UNA CUENTA
+--------------------------------------------------------------------------------
+  1. En el buscador escribe el correo COMPLETO de otra cuenta, por ejemplo:
+        emprendedora.prueba@kawsay.local
+
+     OJO: hay que escribirlo entero. No busca por partes ni por nombre, y es a
+     proposito: una busqueda parcial permitiria ir descubriendo quien tiene
+     cuenta en el sistema.
+
+  2. Pulsa "Ver cuenta".
+
+QUE DEBE PASAR: aparece la ficha con su estado (ACTIVE) y los botones de
+accion.
+
+
+PRUEBA 4.2 - SUSPENDER Y REACTIVAR  (esta es la funcion principal)
+--------------------------------------------------------------------------------
+  1. Con la cuenta de la emprendedora a la vista, pulsa "Suspender".
+  2. Escribe un motivo. Debe tener AL MENOS 5 caracteres; con menos, lo
+     rechaza.
+        Ejemplo: "Prueba de suspension"
+  3. Confirma.
+
+QUE DEBE PASAR: el estado cambia a SUSPENDED y el boton "Suspender" queda
+deshabilitado, mientras se habilita "Reactivar".
+
+  4. AHORA COMPRUEBA QUE DE VERDAD CORTO EL ACCESO:
+     Abre una ventana de incognito e intenta ingresar como
+     emprendedora.prueba@kawsay.local
+
+     QUE DEBE PASAR: no la deja entrar. Suspender corta el acceso de inmediato
+     y revoca las sesiones que ya estaban abiertas; no espera a que caduque el
+     token.
+
+  5. Vuelve a la ventana de administracion y pulsa "Reactivar".
+  6. Intenta ingresar de nuevo en incognito.
+     QUE DEBE PASAR: ahora si entra.
+
+CASO QUE VALE LA PENA MIRAR:
+Una cuenta en estado DELETED (que pidio su eliminacion) NO se puede suspender
+ni reactivar. En vez de un boton que no hace nada, la pantalla te explica por
+que. Si quieres verlo tendrias que eliminar una cuenta desde Privacidad
+primero.
+
+
+PRUEBA 4.3 - LA COLA DE ALERTAS DE SEGURIDAD
+--------------------------------------------------------------------------------
+Al entrar, la cola esta filtrada en "Abiertas" y probablemente este vacia. Eso
+es normal, no un fallo. Para generar una alerta de verdad:
+
+  1. Abre una ventana de incognito.
+  2. Intenta ingresar como emprendedora.prueba@kawsay.local con una contrasena
+     EQUIVOCADA, CINCO VECES SEGUIDAS.
+     (El umbral es 5 intentos fallidos sobre la misma cuenta.)
+
+  3. Vuelve a la ventana de administracion y recarga la cola de alertas.
+
+QUE DEBE PASAR: aparece UNA alerta, de severidad MEDIA, que dice "Bloqueo de
+una cuenta por intentos fallidos".
+
+  Fijate en un detalle: aunque falles 8 o 10 veces, debe generarse UNA SOLA
+  alerta, no una por intento. La alerta se crea al pasar de "no bloqueada" a
+  "bloqueada", no en cada fallo.
+
+  4. Pulsa "Tomar" sobre la alerta.
+     QUE DEBE PASAR: pasa al estado "Tomada" (ACKNOWLEDGED).
+  5. Cambia el filtro a "Tomadas" y comprueba que ahi esta.
+  6. Cierrala.
+     QUE DEBE PASAR: pasa a "Cerradas" (RESOLVED).
+
+  7. Desde una alerta, usa "Ver cuenta" para saltar directo a la ficha de la
+     cuenta senalada. Es el camino corto entre detectar y actuar.
+
+NOTA: la cuenta queda bloqueada 60 segundos. Si quieres volver a entrar con
+ella, espera ese minuto.
+
+
+PRUEBA 4.4 - LA TRAZA DE AUDITORIA
+--------------------------------------------------------------------------------
+  1. Entra en "Auditoria".
+  2. Filtra por accion:  account.suspend
+     QUE DEBE PASAR: aparecen las suspensiones que hiciste en la prueba 4.2.
+  3. Mira la columna "Actora".
+     QUE DEBE PASAR: NUNCA muestra un correo ni un identificador real, solo una
+     huella seudonimizada. Es a proposito.
+
+
+PRUEBA 4.5 - EVALUACION: LEE PERO NO EJECUTA
+--------------------------------------------------------------------------------
+  1. Entra en "Evaluacion".
+  2. QUE DEBE PASAR: ves los conjuntos, los casos y las corridas, y puedes
+     comparar dos. Pero el boton "Ejecutar tanda" NO DEBE APARECER, y en su
+     lugar debe decirte que ejecutar requiere el permiso source.review.
+
+     La administradora supervisa; medir el asistente es trabajo de la curadora.
+
+
+PRUEBA 4.6 - LO QUE NO DEBE PODER
+--------------------------------------------------------------------------------
+    http://localhost:3000/                  (Inicio)
+    http://localhost:3000/finanzas
+    http://localhost:3000/asistente
+    http://localhost:3000/curaduria
+
+QUE DEBE PASAR: acceso denegado en todas.
+
+
+================================================================================
+5. ROL AUDITORA_INVESTIGADORA
+================================================================================
+Cuenta: auditora.prueba@kawsay.local
+
+Este rol existe para MIRAR sin poder tocar. Esa incapacidad de tocar es
+justamente lo que lo convierte en una auditoria: si pudiera alterar lo que
+revisa, no serviria de nada.
+
+AL INGRESAR
+--------------------------------------------------------------------------------
+Debe llevarte a Auditoria.
+Menu: Auditoria, Evaluacion, Privacidad.
+
+
+PRUEBA 5.1 - RECORRER LA TRAZA
+--------------------------------------------------------------------------------
+  1. Sin ningun filtro, mira la lista de eventos.
+  2. Filtra por tipo de objeto:  business
+     QUE DEBE PASAR: solo eventos sobre emprendimientos.
+  3. Filtra por accion:  evaluation.run
+     QUE DEBE PASAR: aparecen las tandas de evaluacion que ejecuto la curadora
+     en la prueba 3.4.
+  4. Usa las flechas de paginacion.
+  5. Pasa el cursor sobre la huella de la columna "Actora".
+     QUE DEBE PASAR: muestra la huella de integridad del evento.
+
+DETALLE QUE VALE LA PENA SABER:
+La tabla de auditoria no admite modificaciones ni borrados. Hay dos
+disparadores en la base de datos que lo impiden, asi que ni siquiera alguien
+con acceso directo a MariaDB podria editar un evento sin que se note.
+
+
+PRUEBA 5.2 - EVALUACION: COMPARAR SIN EJECUTAR
+--------------------------------------------------------------------------------
+  1. Entra en "Evaluacion".
+  2. QUE DEBE PASAR: puedes ver los conjuntos, los casos con su categoria, y
+     todas las corridas. El boton "Ejecutar tanda" NO debe aparecer.
+  3. Marca dos corridas como "Antes" y "Despues" y revisa la comparacion.
+
+
+PRUEBA 5.3 - LO QUE NO DEBE PODER
+--------------------------------------------------------------------------------
+    http://localhost:3000/administracion    <- no puede suspender a nadie
+    http://localhost:3000/curaduria         <- no puede tocar las fuentes
+    http://localhost:3000/                  (Inicio)
+    http://localhost:3000/finanzas
+    http://localhost:3000/asistente
+
+QUE DEBE PASAR: acceso denegado en todas.
+
+Lo mas importante de este rol es precisamente la prueba 5.3: comprobar que
+puede verlo todo y cambiar nada.
+
+
+================================================================================
+6. ROL SERVICIO_INTERNO
+================================================================================
+Cuenta: servicio.interno.prueba@kawsay.local
+
+Es la prueba mas corta, y sin embargo interesante.
+
+AL INGRESAR
+--------------------------------------------------------------------------------
+Debe llevarte a Privacidad, porque es lo unico que puede abrir.
+Menu: UN SOLO enlace, Privacidad.
+
+
+PRUEBA 6.1 - EL REFUGIO
+--------------------------------------------------------------------------------
+  1. Comprueba que el menu tiene solo "Privacidad".
+  2. Comprueba que desde ahi puede gestionar sus consentimientos, descargar sus
+     datos y eliminar su cuenta, igual que cualquier otra.
+  3. Escribe a mano CUALQUIER otra direccion:
+        http://localhost:3000/
+        http://localhost:3000/finanzas
+        http://localhost:3000/curaduria
+        http://localhost:3000/administracion
+        http://localhost:3000/auditoria
+        http://localhost:3000/evaluacion
+
+QUE DEBE PASAR: acceso denegado en todas, pero SIN quedar atrapada: siempre
+tiene su pantalla de Privacidad donde volver.
+
+POR QUE ESTO IMPORTA:
+Es el caso limite del diseno. Un rol que no puede hacer absolutamente nada en
+el sistema sigue conservando el control sobre sus propios datos. Si Privacidad
+estuviera detras de un permiso, esta cuenta no podria ni borrarse a si misma.
+
+RECUERDA: jobs.execute todavia no abre ningun endpoint. Que esta cuenta no
+pueda hacer nada mas NO es un fallo que debas reportar.
+
+
+================================================================================
+7. PRUEBA TRANSVERSAL: LA SEPARACION DE ROLES
+================================================================================
+
+Esta es la prueba que resume todo. Hazla al final.
+
+  1. Cierra sesion.
+  2. Ingresa con cada una de las cinco cuentas, una tras otra.
+  3. Para cada una, anota:
+
+     a) A que pantalla te llevo al ingresar.
+     b) Cuantos enlaces tiene el menu y cuales son.
+
+  4. Contrasta con la tabla de la seccion 1.
+
+RESULTADO ESPERADO:
+
+     emprendedora ....... aterriza en Inicio          - 5 enlaces
+     curadora ........... aterriza en Curaduria       - 3 enlaces
+     administradora ..... aterriza en Administracion  - 4 enlaces
+     auditora ........... aterriza en Auditoria       - 3 enlaces
+     servicio interno ... aterriza en Privacidad      - 1 enlace
+
+Si alguna cuenta de personal aterriza en la pantalla de Inicio (la de la
+emprendedora), eso es un fallo: fue exactamente el problema que se corrigio en
+la version v0.4.0.
+
+
+================================================================================
+8. PRUEBA SIN CONEXION (PWA)
+================================================================================
+
+IMPORTANTE: esta prueba NO se hace contra `npm run dev`. La documentacion de
+Next dice que el modo desarrollo no es referencia fiable para offline. Usa
+`next build && next start`, o la aplicacion que ya sirve Docker en
+http://localhost:3000 (esa imagen arranca con `npm start`).
+
+En Chrome: DevTools -> Network -> Offline. En el telefono: modo avion.
+
+8.1 RECARGA CON ESTILOS
+--------------------------------------------------------------------------------
+Con red, visita `/` y `/finanzas`. Corta la red y RECARGAR la pagina.
+
+QUE DEBE PASAR: la aplicacion carga, con estilos y con JavaScript.
+QUE NO DEBE PASAR: una pagina cruda sin estilos, o un error del navegador.
+
+8.2 SALDO HONESTO
+--------------------------------------------------------------------------------
+Sin red, mira `/`.
+
+QUE DEBE PASAR: muestra los ultimos datos conocidos con su antiguedad
+(«actualizado hace …»), o dice que no pudo cargar.
+QUE NO DEBE PASAR: «Tu saldo registrado es Bs 0,00» si no pudo comprobarlo.
+
+8.3 BANNER
+--------------------------------------------------------------------------------
+Corta la red estando dentro de la aplicacion. Luego vuelve a conectarla.
+
+QUE DEBE PASAR: aparece el aviso de sin conexion (un lector de pantalla lo
+anuncia). Al volver la red, desaparece.
+
+8.4 GUARDAR SIN RED, Y SIN DUPLICAR
+--------------------------------------------------------------------------------
+Sin red, intenta guardar un movimiento.
+
+QUE DEBE PASAR: dice que no se guardo porque no hay conexion.
+Al volver la red, guardarlo funciona y NO aparece duplicado.
+
+8.5 DOBLE TOQUE CON RED LENTA
+--------------------------------------------------------------------------------
+Con red lenta (DevTools -> Slow 3G), toca «Guardar» dos veces.
+
+QUE DEBE PASAR: el boton se deshabilita y se crea UN movimiento, no dos.
+
+8.6 RUTA NUNCA VISITADA
+--------------------------------------------------------------------------------
+Sin red, escribe a mano una ruta que no hayas abierto en esta sesion
+(por ejemplo `/offline` si no la visitaste, o una pantalla que no tocaste).
+
+QUE DEBE PASAR: lleva a `/offline`, no a un error del navegador.
+
+8.7 INSTALAR
+--------------------------------------------------------------------------------
+En Chrome: DevTools -> Application -> Manifest. En Android, el navegador
+debe ofrecer instalar.
+
+QUE DEBE PASAR: hay iconos PNG de 192 y 512, y la aplicacion se puede
+instalar.
+
+
+================================================================================
+9. SI ALGO FALLA
+================================================================================
+
+"No carga nada / el navegador no conecta"
+    Revisa que los contenedores esten arriba:  docker compose ps
+    Si el backend no responde:  docker logs proyecto-integrador-backend-1
+
+"Me saca la sesion sola"
+    El token de acceso dura 15 minutos y se renueva solo. Si te saca antes de
+    ese tiempo, o si te saca justo despues de que la administradora te
+    suspendio, es el comportamiento correcto.
+
+"En Evaluacion dice que no se pudo descifrar el caso tal"
+    Sembraste con una clave distinta a la del contenedor. Vuelve al paso 0.3 y
+    ejecuta el guion con --reset, esta vez pasando CONTENT_ENCRYPTION_KEY.
+
+"La cola de alertas esta vacia"
+    Es lo normal si nadie fallo el ingreso. No es un fallo: genera una alerta
+    con la prueba 4.3.
+
+"El asistente se abstiene de todo"
+    No hay fuentes publicadas. Siembra el corpus (paso 0.3) o publica un
+    documento como curadora (prueba 3.1).
+
+"No puedo entrar con una cuenta"
+    Puede estar bloqueada 60 segundos por intentos fallidos, o suspendida por
+    la prueba 4.2. Espera el minuto, o reactivala como administradora, o vuelve
+    a correr el guion del paso 0.2.
+
+
+================================================================================
+10. APAGAR TODO AL TERMINAR
+================================================================================
+
+    cd C:\proyecto-integrador
+    docker compose down
+
+Esto detiene y elimina los contenedores pero CONSERVA los datos: la base, las
+cuentas y todo lo que hayas cargado siguen ahi para la proxima vez.
+
+NO uses "docker compose down -v". Esa opcion borra tambien el volumen, es decir
+la base de datos entera, y tendrias que rehacer todo desde el paso 0.2.
+
+================================================================================
+FIN
+================================================================================

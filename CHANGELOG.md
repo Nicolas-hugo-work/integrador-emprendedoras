@@ -6,6 +6,62 @@ Este proyecto utiliza [versionado semántico](https://semver.org/lang/es/):
 - `MINOR` (`0.2.0`): nuevas funciones compatibles.
 - `MAJOR` (`1.0.0`): versión estable o cambios incompatibles.
 
+## [0.8.0] - 2026-09-20
+
+Que funcione sin conexion, y que cuando no pueda, lo diga. Enteramente de
+cliente: sin cambios de esquema, sin migracion y sin una operacion nueva en la
+API.
+
+### Service worker
+
+- `sw.js` escribe en caché. `/_next/static/**` va cache-first: son inmutables y
+  llevan hash en el nombre. Los documentos van network-first, con `/offline`
+  como ultimo recurso. Las llamadas a la API siguen fuera del SW.
+- Caché versionado `kawsay-shell-v2`. Sin red, una recarga ya no entrega HTML
+  como si fuera JS: eso era lo que `nosniff` bloqueaba.
+
+### Conexion
+
+- `experimental.useOffline` enciende la deteccion de Next 16. Reintenta
+  navegaciones, prefetch y Server Actions. **No reintenta** los `fetch()` de
+  `api.ts`: la documentacion los excluye de forma explicita. Lo que ganamos es
+  la senal, mejor que `navigator.onLine` en un portal cautivo.
+- Aviso de sin conexion en el layout (`<output>`, anunciado por el lector de
+  pantalla), para que cubra tanto `AppShell` como el inicio, que reimplementa
+  la barra.
+
+### Datos
+
+- IndexedDB guarda la ultima respuesta buena de cada GET. `api()` conserva su
+  firma. `apiCached` devuelve esa copia con `stale: true` solo ante un fallo
+  de red, nunca ante un HTTP.
+- `/` y `/finanzas` tienen tres estados honestos: cargando (con `aria-live`),
+  datos con su antiguedad si vienen del caché, o «no se pudo cargar». Ninguno
+  muestra `Bs 0,00` sin saber que es cierto.
+- Un fallo de red produce un mensaje en espanol, no el `TypeError` del
+  navegador.
+
+### Escrituras
+
+- Los botones de guardar de finanzas y emprendimiento se deshabilitan mientras
+  penden. Tocar dos veces no crea dos movimientos.
+- Sin cola: una escritura sin conexion se rechaza con «no se guardo porque no
+  hay conexion». Encolar POST que no son idempotentes seria otro defecto de
+  confianza.
+
+### PWA
+
+- `app/manifest.ts` sustituye al manifiesto SVG. PNG de 192 y 512, maskable,
+  `id`, `scope` y `background_color`.
+- El registro del service worker avisa cuando hay una version nueva.
+
+### Deuda que mentia
+
+- `VERSION` y `package-lock.json` coinciden con el resto. Hay una prueba que
+  lee los cinco lugares y exige que digan lo mismo.
+- README, semillas (`business.manage_own`), docstrings vencidos y el boton
+  muerto de «Continuar diagnostico».
+
 ## [0.7.0] - 2026-09-02
 
 Primero medir, despues mejorar. El asistente es la funcion mas visible del

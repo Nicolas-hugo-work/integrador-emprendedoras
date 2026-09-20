@@ -1,6 +1,6 @@
 # Kawsay — PWA de autonomía económica femenina
 
-**Versión actual:** `v0.1.0`
+**Versión actual:** `v0.8.0`
 
 Aplicación web progresiva para acompañar a emprendedoras bolivianas en el registro de su negocio, el control financiero, la orientación con fuentes verificadas y el ejercicio de sus derechos de privacidad.
 
@@ -115,5 +115,5 @@ La descripción de dominios, relaciones, retención y diccionario resumido está
 
 - El asistente actual es de recuperación segura: extrae evidencia publicada, pero no conecta todavía un proveedor externo de modelo generativo.
 - La transcripción de voz y el envío real de códigos por SMS/correo requieren elegir proveedores.
-- La exportación de datos crea la solicitud; un trabajo posterior debe generar y entregar el archivo.
+- La exportación de datos genera la copia en el momento de descargarla (desde v0.4.0).
 - Antes de producción deben reemplazarse todos los secretos locales, habilitar HTTPS, almacenamiento de objetos y copias de respaldo verificadas.

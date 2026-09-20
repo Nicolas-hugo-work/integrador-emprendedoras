@@ -12,8 +12,14 @@ import {
   X,
 } from 'lucide-react';
 
+import { useOffline } from 'next/offline';
+
 import { AppShell } from '../components/app-shell';
-import { api } from '../lib/api';
+import {
+  api,
+  isNetworkError,
+  OFFLINE_WRITE_ERROR,
+} from '../lib/api';
 import { fieldValue, optionalFieldValue } from '../lib/form';
 import type { Business } from '../types/api';
 
@@ -22,10 +28,12 @@ function describe(reason: unknown, fallback: string): string {
 }
 
 export default function BusinessPage() {
+  const offline = useOffline();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [editing, setEditing] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -46,9 +54,14 @@ export default function BusinessPage() {
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setError('');
+    if (offline) {
+      setError(OFFLINE_WRITE_ERROR);
+      return;
+    }
     const body = {
       name: fieldValue(data, 'name'),
       stage: fieldValue(data, 'stage'),
@@ -56,6 +69,7 @@ export default function BusinessPage() {
       department_code: optionalFieldValue(data, 'department_code'),
       municipality: optionalFieldValue(data, 'municipality'),
     };
+    setSaving(true);
     try {
       if (editing) {
         const updated = await api<Business>(`/businesses/${editing.id}`, {
@@ -75,7 +89,13 @@ export default function BusinessPage() {
       }
       form.reset();
     } catch (reason) {
-      setError(describe(reason, 'No se pudo guardar.'));
+      setError(
+        isNetworkError(reason)
+          ? OFFLINE_WRITE_ERROR
+          : describe(reason, 'No se pudo guardar.'),
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -85,6 +105,10 @@ export default function BusinessPage() {
     );
     if (!confirmed) return;
     setError('');
+    if (offline) {
+      setError(OFFLINE_WRITE_ERROR);
+      return;
+    }
     try {
       await api(`/businesses/${business.id}`, { method: 'DELETE' });
       setBusinesses((current) =>
@@ -92,7 +116,11 @@ export default function BusinessPage() {
       );
       if (editing?.id === business.id) setEditing(null);
     } catch (reason) {
-      setError(describe(reason, 'No se pudo eliminar.'));
+      setError(
+        isNetworkError(reason)
+          ? OFFLINE_WRITE_ERROR
+          : describe(reason, 'No se pudo eliminar.'),
+      );
     }
   }
 
@@ -184,7 +212,11 @@ export default function BusinessPage() {
                 {error}
               </p>
             )}
-            <button className="h-12 rounded-xl bg-primary px-6 font-bold text-white sm:col-span-2">
+            <button
+              disabled={saving}
+              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 font-bold text-white disabled:opacity-60 sm:col-span-2"
+            >
+              {saving && <LoaderCircle className="size-4 animate-spin" />}
               {editing ? 'Guardar corrección' : 'Guardar emprendimiento'}
             </button>
           </form>
@@ -205,7 +237,10 @@ export default function BusinessPage() {
               Emprendimientos registrados
             </h2>
             {loading ? (
-              <LoaderCircle className="mt-6 animate-spin text-primary" />
+              <p aria-live="polite">
+                <LoaderCircle className="mt-6 animate-spin text-primary" />
+                <span className="sr-only">Cargando emprendimientos</span>
+              </p>
             ) : businesses.length ? (
               <div className="mt-4 space-y-3">
                 {businesses.map((item) => (
@@ -243,6 +278,10 @@ export default function BusinessPage() {
                   </article>
                 ))}
               </div>
+            ) : error ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                No se pudieron cargar los emprendimientos.
+              </p>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">
                 Aún no registraste un emprendimiento.

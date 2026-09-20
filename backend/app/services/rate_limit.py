@@ -8,7 +8,7 @@ El contador vive en memoria del proceso a propósito. La alternativa —una tabl
 nueva— cambiaría el esquema, y un criterio de aceptación del plan es que la
 huella de `information_schema` quede idéntica. Con un solo contenedor de
 backend (el de `docker-compose.yml`) el límite es efectivo. Migrar a Redis o a
-una tabla dedicada queda anotado para v0.3.0.
+una tabla dedicada queda anotado para cuando haya más de un proceso.
 """
 
 import threading
