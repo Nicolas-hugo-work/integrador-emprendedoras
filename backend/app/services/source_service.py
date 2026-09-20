@@ -83,6 +83,10 @@ def create_source_chunk(db: Session, user: User, payload) -> dict[str, str]:
         token_count=payload.token_count,
     )
     db.add(chunk)
+    db.flush()
+    from app.services.embedding_service import persist_chunk_embedding
+
+    persist_chunk_embedding(db, chunk)
     db.commit()
     return {"id": chunk.id}
 
@@ -336,17 +340,20 @@ def create_source_chunks(
     ) + 1
 
     for desplazamiento, (item, huella) in enumerate(zip(payload.chunks, hashes, strict=True)):
-        db.add(
-            SourceChunk(
-                source_version_id=version_id,
-                chunk_number=siguiente + desplazamiento,
-                heading=item.heading,
-                content=item.content,
-                content_hash=huella,
-                page_number=item.page_number,
-                token_count=_count_words(item.content),
-            )
+        chunk = SourceChunk(
+            source_version_id=version_id,
+            chunk_number=siguiente + desplazamiento,
+            heading=item.heading,
+            content=item.content,
+            content_hash=huella,
+            page_number=item.page_number,
+            token_count=_count_words(item.content),
         )
+        db.add(chunk)
+        db.flush()
+        from app.services.embedding_service import persist_chunk_embedding
+
+        persist_chunk_embedding(db, chunk)
 
     write_audit(
         db,

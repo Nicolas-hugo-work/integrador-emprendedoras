@@ -29,7 +29,6 @@ class RefreshRequest(BaseModel):
 
 class TokenPair(BaseModel):
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"
     expires_in: int
 
@@ -495,3 +494,50 @@ class EvaluationRunView(BaseModel):
 
 class EvaluationRunDetail(EvaluationRunView):
     results: list[EvaluationResultView]
+
+
+QUESTIONNAIRE_VERSION = "1.0"
+
+
+class DiagnosticQuestion(BaseModel):
+    code: str
+    prompt: str
+
+
+class DiagnosticSessionCreate(BaseModel):
+    business_id: str
+
+
+class DiagnosticAnswerWrite(BaseModel):
+    question_code: str = Field(min_length=2, max_length=64)
+    answer_text: str = Field(min_length=1, max_length=2000)
+
+
+class DiagnosticAnswerView(BaseModel):
+    question_code: str
+    answer_text: str
+
+
+class DiagnosticSessionView(BaseModel):
+    id: str
+    business_id: str
+    questionnaire_version: str
+    status: str
+    answers: list[DiagnosticAnswerView]
+    completed_at: datetime | None
+
+
+class FormalizationStepView(BaseModel):
+    id: str
+    step_number: int
+    title: str
+    description: str
+    source_version_id: str | None
+    completed_at: datetime | None
+
+
+class FormalizationRouteView(BaseModel):
+    id: str
+    business_id: str
+    status: str
+    steps: list[FormalizationStepView]

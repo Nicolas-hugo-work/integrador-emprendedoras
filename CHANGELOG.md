@@ -6,6 +6,67 @@ Este proyecto utiliza [versionado semántico](https://semver.org/lang/es/):
 - `MINOR` (`0.2.0`): nuevas funciones compatibles.
 - `MAJOR` (`1.0.0`): versión estable o cambios incompatibles.
 
+## [0.12.0] - 2026-09-20
+
+Poder decir producción sin mentir. No hay función nueva de usuaria.
+
+- Imágenes Docker con usuario no-root y `HEALTHCHECK`. El frontend de Compose
+  espera a que el backend esté sano.
+- Dependabot semanal. `SECURITY.md`.
+- ADR 001: `organizations`, `business_memberships` y `background_jobs` siguen
+  dormidos. Finanzas grupales no se activan por esta vía.
+- `main` en GitHub exige los tres checks de CI (backend, frontend, Compose)
+  y no admite force-push. `enforce_admins` quedó encendido.
+
+## [0.11.0] - 2026-09-20
+
+Diagnóstico y ruta de formalización sobre las tablas que ya existían.
+
+- HTTP bajo `business.manage_own` y `owned_business`. Respuestas cifradas.
+- La ruta es plantilla ligada a una versión publicada si hay; no la genera un LLM.
+- Pantalla `/diagnostico` con `apiCached` en los GET. Sin red no se escribe.
+
+## [0.10.0] - 2026-09-20
+
+Recuperación `VECTOR(768)` medible, sin LLM.
+
+- Al publicar fragmentos se guarda una proyección léxica local de 768
+  dimensiones (`lexical-hash-768`). No hay artefacto de red ni API de pago.
+- `MODEL_VERSION = v3`. Si no hay embeddings, se usa FULLTEXT (v2).
+- Híbrido: FULLTEXT decide si hay evidencia; VECTOR solo reordena candidatos.
+  Un vecino coseno sin coincidencia léxica no se cita.
+- Misma tanda del banco, v2 contra v3:
+
+| Medida | v2 (`FULLTEXT`) | v3 (`VECTOR`) |
+|---|---|---|
+| Casos que pasan | 100 % | 100 % |
+| Recuperacion (recall) | 100 % | 100 % |
+| Respuestas con cita | 80 % | 80 % |
+| Con advertencia normativa | 50 % | 50 % |
+| Abstenciones | 20 % | 20 % |
+
+No empeora el banco. El valor de la versión es el vector persistido y medible,
+no un salto de calidad en diez casos.
+
+## [0.9.0] - 2026-09-20
+
+El refresh deja de vivir en `sessionStorage`.
+
+- Cookie `HttpOnly`, `SameSite=Lax`, `Secure` fuera de development. El JSON de
+  `TokenPair` ya no incluye `refresh_token`.
+- El frontend llama a `/api/*` (rewrite same-origin). El acceso de 15 min queda
+  en memoria; un aviso en `sessionStorage` indica que hay sesión para renovar.
+- Logout borra cookie y memoria.
+
+## [0.8.2] - 2026-09-20
+
+La honestidad offline llega a emprendimiento, privacidad y asistente.
+
+- `GET /businesses` y `GET /consents` usan `apiCached` (dato fresco, copia con
+  antigüedad, o «no se pudo»).
+- El asistente no cachea consultas: deshabilita el envío sin red.
+- `/me` no se cachea: un permiso rancio abriría o cerraría pantallas.
+
 ## [0.8.1] - 2026-09-20
 
 Deja de afirmar lo que no hacía. Sin funciones nuevas: se cumple lo que ya

@@ -106,12 +106,15 @@ def _register_account(client, *, password: str = "clave-de-prueba-2026") -> Acco
     logged_in = client.post("/auth/login", json={"contact": contact, "password": password})
     assert logged_in.status_code == 200, logged_in.text
     tokens = logged_in.json()
+    refresh = logged_in.cookies.get("kawsay_refresh")
+    assert refresh, "el refresh viaja en cookie HttpOnly, no en el JSON"
+    assert "refresh_token" not in tokens
     return Account(
         user_id=registration.json()["user_id"],
         contact=contact,
         password=password,
         access_token=tokens["access_token"],
-        refresh_token=tokens["refresh_token"],
+        refresh_token=refresh,
     )
 
 

@@ -1,6 +1,6 @@
 # Kawsay — PWA de autonomía económica femenina
 
-**Versión actual:** `v0.8.1`
+**Versión actual:** `v0.12.0`
 
 Aplicación web progresiva para acompañar a emprendedoras bolivianas en el registro de su negocio, el control financiero, la orientación con fuentes verificadas y el ejercicio de sus derechos de privacidad.
 

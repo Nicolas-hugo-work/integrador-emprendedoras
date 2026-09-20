@@ -12,8 +12,16 @@ import {
   Trash2,
 } from 'lucide-react';
 
+import { useOffline } from 'next/offline';
+
 import { AppShell } from '../components/app-shell';
-import { api, clearTokens } from '../lib/api';
+import {
+  api,
+  apiCached,
+  clearTokens,
+  OFFLINE_WRITE_ERROR,
+} from '../lib/api';
+import { describeStaleness } from '../lib/staleness';
 import type { ConsentStatus } from '../types/api';
 
 /** Texto propio para las finalidades conocidas; el resto usa el del backend. */
@@ -40,8 +48,12 @@ function describe(reason: unknown, fallback: string): string {
 }
 
 export default function PrivacyPage() {
+  const offline = useOffline();
   const [consents, setConsents] = useState<ConsentStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bootFailed, setBootFailed] = useState(false);
+  const [stale, setStale] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [message, setMessage] = useState('');
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
@@ -50,11 +62,16 @@ export default function PrivacyPage() {
     let alive = true;
     void (async () => {
       try {
-        const listed = await api<ConsentStatus[]>('/consents');
-        if (alive) setConsents(listed);
+        const listed = await apiCached<ConsentStatus[]>('/consents');
+        if (!alive) return;
+        setConsents(listed.data);
+        setStale(listed.stale);
+        setFetchedAt(listed.fetchedAt);
       } catch (reason) {
-        if (alive)
+        if (alive) {
+          setBootFailed(true);
           setError(describe(reason, 'No se pudieron cargar tus preferencias.'));
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -67,6 +84,10 @@ export default function PrivacyPage() {
   async function decide(consent: ConsentStatus, granted: boolean) {
     setError('');
     setMessage('');
+    if (offline) {
+      setError(OFFLINE_WRITE_ERROR);
+      return;
+    }
     try {
       await api('/consents', {
         method: 'POST',
@@ -89,6 +110,10 @@ export default function PrivacyPage() {
       'Tu cuenta se desactivará ahora y sus datos se purgarán en un máximo de 30 días. ¿Continuar?',
     );
     if (!confirmed) return;
+    if (offline) {
+      setError(OFFLINE_WRITE_ERROR);
+      return;
+    }
     try {
       await api('/privacy/deletion', {
         method: 'POST',
@@ -104,6 +129,10 @@ export default function PrivacyPage() {
   async function requestExport() {
     setError('');
     setMessage('');
+    if (offline) {
+      setError(OFFLINE_WRITE_ERROR);
+      return;
+    }
     setExporting(true);
     try {
       // La copia se genera en el momento de descargarla: no hay un archivo
@@ -157,10 +186,24 @@ export default function PrivacyPage() {
             </div>
           </div>
 
+          {stale && (
+            <p className="text-sm font-medium text-amber-800">
+              {describeStaleness(fetchedAt)}
+            </p>
+          )}
+
           {loading ? (
-            <div className="grid min-h-40 place-items-center rounded-3xl border bg-card">
+            <div
+              aria-live="polite"
+              className="grid min-h-40 place-items-center rounded-3xl border bg-card"
+            >
               <LoaderCircle className="animate-spin text-primary" />
+              <span className="sr-only">Cargando consentimientos</span>
             </div>
+          ) : bootFailed && !consents.length ? (
+            <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+              {error || 'No se pudieron cargar tus preferencias.'}
+            </p>
           ) : (
             optional.map((consent) => {
               const copy = COPY[consent.purpose_code];

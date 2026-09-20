@@ -3,6 +3,7 @@
 import {
   BookOpenCheck,
   Bot,
+  ClipboardList,
   FlaskConical,
   Goal,
   LayoutDashboard,
@@ -48,6 +49,12 @@ export const NAV_LINKS: NavLink[] = [
     href: '/emprendimiento',
     label: 'Mi negocio',
     icon: Goal,
+    permission: 'business.manage_own',
+  },
+  {
+    href: '/diagnostico',
+    label: 'Diagnóstico',
+    icon: ClipboardList,
     permission: 'business.manage_own',
   },
   {
